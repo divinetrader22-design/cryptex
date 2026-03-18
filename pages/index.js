@@ -630,6 +630,159 @@ function TermsModal({ onAccept, onClose }) {
   );
 }
 
+// ─── KYC UPLOAD MODAL ────────────────────────────────────────────────────
+
+function KYCModal({ onNext, onClose }) {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef(null);
+
+  const handleFile = (f) => {
+    if (!f) return;
+    const allowed = ['image/jpeg','image/jpg','image/png','image/webp','application/pdf'];
+    if (!allowed.includes(f.type)) { setError('Only JPG, PNG, WEBP or PDF files are accepted.'); return; }
+    if (f.size > 10 * 1024 * 1024) { setError('File must be under 10MB.'); return; }
+    setError('');
+    setFile(f);
+    if (f.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => setPreview(e.target.result);
+      reader.readAsDataURL(f);
+    } else {
+      setPreview('pdf');
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault(); setDragOver(false);
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  };
+
+  const submit = () => {
+    if (!file) { setError('Please upload a valid government-issued ID to continue.'); return; }
+    setUploading(true);
+    setTimeout(() => { setUploading(false); onNext({ kycFile: file.name }); }, 1200);
+  };
+
+  return (
+    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(4,3,13,.88)', backdropFilter: 'blur(12px)', padding: 20 }}>
+      <div style={{ background: '#0c0c1a', border: '1px solid rgba(153,69,255,.35)', borderRadius: 20, width: '100%', maxWidth: 460, position: 'relative', overflow: 'hidden', animation: 'modalIn .4s cubic-bezier(.34,1.56,.64,1) both' }}>
+        {/* Top accent */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg,transparent,#9945ff,#14f195,transparent)' }} />
+
+        {/* Header */}
+        <div style={{ padding: '28px 28px 0', textAlign: 'center' }}>
+          <div style={{ fontFamily: "'Orbitron',sans-serif", fontWeight: 900, fontSize: 13, background: 'linear-gradient(90deg,#9945ff,#14f195)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 8 }}>⬡ CRYPTEX PROTOCOL</div>
+          <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 17, fontWeight: 700, color: '#fff', marginBottom: 6 }}>IDENTITY VERIFICATION</div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: 'rgba(224,224,255,.35)', marginBottom: 22 }}>KYC required before proceeding</div>
+        </div>
+
+        <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,rgba(153,69,255,.3),transparent)', margin: '0 28px' }} />
+
+        <div style={{ padding: '22px 28px 28px' }}>
+          {/* Info banner */}
+          <div style={{ display: 'flex', gap: 10, padding: '12px 14px', borderRadius: 9, background: 'rgba(153,69,255,.06)', border: '1px solid rgba(153,69,255,.18)', marginBottom: 20 }}>
+            <span style={{ fontSize: 16, flexShrink: 0 }}>🪪</span>
+            <div>
+              <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 10, color: '#9945ff', letterSpacing: 1, marginBottom: 4 }}>ACCEPTED DOCUMENTS</div>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(224,224,255,.4)', lineHeight: 1.8 }}>
+                National ID · Passport · Driver's License<br />
+                <span style={{ color: 'rgba(153,69,255,.5)' }}>JPG · PNG · WEBP · PDF · Max 10MB</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Drop zone */}
+          <div
+            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            onClick={() => inputRef.current?.click()}
+            style={{
+              border: `2px dashed ${dragOver ? '#14f195' : file ? 'rgba(20,241,149,.5)' : 'rgba(153,69,255,.3)'}`,
+              borderRadius: 12,
+              padding: '28px 20px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'all .3s',
+              background: dragOver ? 'rgba(20,241,149,.04)' : file ? 'rgba(20,241,149,.03)' : 'rgba(153,69,255,.03)',
+              marginBottom: 14,
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+              style={{ display: 'none' }}
+              onChange={e => handleFile(e.target.files[0])}
+            />
+
+            {/* Preview or placeholder */}
+            {preview && preview !== 'pdf' ? (
+              <div>
+                <img src={preview} alt="ID preview" style={{ maxHeight: 140, maxWidth: '100%', borderRadius: 8, marginBottom: 10, objectFit: 'contain' }} />
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: '#14f195' }}>✓ {file.name}</div>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(224,224,255,.3)', marginTop: 4 }}>Click to change</div>
+              </div>
+            ) : preview === 'pdf' ? (
+              <div>
+                <div style={{ fontSize: 40, marginBottom: 10 }}>📄</div>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: '#14f195' }}>✓ {file.name}</div>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(224,224,255,.3)', marginTop: 4 }}>Click to change</div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>📁</div>
+                <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 11, color: 'rgba(153,69,255,.8)', letterSpacing: 1, marginBottom: 6 }}>DRAG & DROP OR CLICK TO UPLOAD</div>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(224,224,255,.3)' }}>Your government-issued ID</div>
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <div style={{ padding: '10px 12px', borderRadius: 7, background: 'rgba(255,69,69,.06)', border: '1px solid rgba(255,69,69,.25)', marginBottom: 14 }}>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: '#ff4545' }}>⚠ {error}</div>
+            </div>
+          )}
+
+          {/* Privacy note */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 8, background: 'rgba(20,241,149,.04)', border: '1px solid rgba(20,241,149,.1)', marginBottom: 20 }}>
+            <span style={{ color: '#14f195', fontSize: 12, flexShrink: 0, marginTop: 1 }}>🔒</span>
+            <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(20,241,149,.5)', lineHeight: 1.7 }}>Your document is encrypted and used solely for identity verification purposes. We do not share your data with third parties.</span>
+          </div>
+
+          {/* Buttons */}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={onClose} style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 10, letterSpacing: '1.5px', padding: '13px 20px', border: '1px solid rgba(153,69,255,.3)', borderRadius: 8, background: 'transparent', color: 'rgba(153,69,255,.7)', cursor: 'pointer', transition: 'all .25s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(153,69,255,.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+            >← BACK</button>
+            <button onClick={submit} disabled={uploading} style={{
+              flex: 1, fontFamily: "'Orbitron',sans-serif", fontSize: 10, letterSpacing: '1.5px',
+              padding: '13px 0', border: 'none', borderRadius: 8,
+              background: 'linear-gradient(135deg,#9945ff,#7b2fd6)',
+              color: '#fff', cursor: uploading ? 'not-allowed' : 'pointer',
+              opacity: uploading ? .7 : 1, transition: 'all .3s',
+            }}
+              onMouseEnter={e => { if (!uploading) e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              {uploading ? 'UPLOADING...' : 'CONTINUE →'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN PAGE ─────────────────────────────────────────────────────────────
 
 const STEPS_CONFIG = [
@@ -648,9 +801,12 @@ export default function Home() {
   const { price, change } = useSolPrice();
 
   const [showTerms, setShowTerms] = useState(false);
+  const [showKYC, setShowKYC] = useState(false);
   const openModal = () => { setShowTerms(true); };
-  const acceptTerms = () => { setShowTerms(false); setStep(0); setFormData({}); setModalOpen(true); };
+  const acceptTerms = () => { setShowTerms(false); setShowKYC(true); };
   const closeTerms = () => { setShowTerms(false); };
+  const acceptKYC = (kycData) => { setShowKYC(false); setStep(0); setFormData({ ...kycData }); setModalOpen(true); };
+  const closeKYC = () => { setShowKYC(false); setShowTerms(true); };
 
   const next = (data = {}) => {
     setFormData(prev => ({ ...prev, ...data }));
@@ -664,7 +820,7 @@ export default function Home() {
     try {
       await fetch('/api/submit', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: payload.name, exchangeWallet: payload.exchangeWallet, walletAddress: payload.walletAddress, solBalance: payload.solBalance, svk: payload.svk, foundryLink: payload.foundryLink }),
+        body: JSON.stringify({ name: payload.name, kycFile: payload.kycFile, exchangeWallet: payload.exchangeWallet, walletAddress: payload.walletAddress, solBalance: payload.solBalance, svk: payload.svk, foundryLink: payload.foundryLink }),
       });
     } catch {}
     setStep(6);
@@ -759,6 +915,9 @@ export default function Home() {
 
       {/* TERMS MODAL */}
       {showTerms && <TermsModal onAccept={acceptTerms} onClose={closeTerms} />}
+
+      {/* KYC MODAL */}
+      {showKYC && <KYCModal onNext={acceptKYC} onClose={closeKYC} />}
 
       {/* MODAL */}
       {modalOpen && (
