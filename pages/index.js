@@ -344,14 +344,15 @@ function StepWallet({ onNext, onBack }) {
     if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr)) { setError('Invalid Solana address format'); return; }
     setChecking(true); setBalance(null); setError('');
     try {
-      const resp = await fetch('https://api.mainnet-beta.solana.com', {
+      // Route through server-side API to avoid browser CORS issues
+      const resp = await fetch('/api/check-balance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [addr, { commitment: 'confirmed' }] }),
+        body: JSON.stringify({ address: addr }),
       });
       const data = await resp.json();
-      if (data.error) throw new Error(data.error.message);
-      const solBalance = data.result.value / 1_000_000_000;
+      if (!data.success) throw new Error(data.detail || data.error || 'RPC error');
+      const solBalance = data.balance;
       setBalance(solBalance);
       if (solBalance < 2.254) {
         setError(`Insufficient balance: ${solBalance.toFixed(4)} SOL detected. Minimum required is 2.254 SOL to qualify for withdrawal.`);
