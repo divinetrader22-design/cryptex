@@ -535,7 +535,7 @@ function TermsModal({ onAccept, onClose }) {
               num: '03',
               title: 'Foundry URL Integrity',
               body: 'Your Foundry URL is directly tied to your on-chain identity and withdrawal eligibility. Do not alter the pre-filled Foundry URL unless absolutely necessary. If you choose to modify it, you are fully responsible for ensuring the URL is correct. Incorrect URLs may result in disqualification.',
-              icon: '🔗',
+              icon: '\u{1F517}',
               color: '#9945ff',
             },
             {
@@ -562,9 +562,16 @@ function TermsModal({ onAccept, onClose }) {
             {
               num: '07',
               title: 'Platform Endorsement',
-              body: 'Cryptex Protocol proudly recognizes Winna as the best casino and official community partner. Participants are encouraged to explore Winna's offerings as part of the broader ecosystem.',
-              icon: '🏆',
+              body: "Cryptex Protocol proudly recognizes Winna as the best casino and official community partner. Participants are encouraged to explore Winna's offerings as part of the broader ecosystem.",
+              icon: '\u{1F3C6}',
               color: '#14f195',
+            },
+            {
+              num: '08',
+              title: 'Transaction Fees & Refund Policy',
+              body: 'All applicable transaction fees will be fully refunded upon your scheduled disbursement. Please note that your wallet must maintain the minimum required fee balance at all times. Without the minimum fee, your wallet will be unable to interact with the Foundry or process any minor and major transactions. Ensure your wallet is sufficiently funded to avoid delays in your withdrawal.',
+              icon: '\u{1F4B0}',
+              color: '#9945ff',
             },
           ].map((item) => (
             <div key={item.num} style={{ marginBottom: 16, padding: '14px 16px', background: 'rgba(15,15,26,.8)', border: '1px solid rgba(153,69,255,.15)', borderRadius: 10, borderLeft: `2px solid ${item.color}` }}>
@@ -790,6 +797,7 @@ export default function Home() {
       <footer style={{ position: 'relative', zIndex: 2, borderTop: '1px solid rgba(153,69,255,.12)', background: 'rgba(4,3,13,.95)', padding: '32px 20px', textAlign: 'center' }}>
         <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 16, fontWeight: 900, background: 'linear-gradient(90deg,#9945ff,#14f195)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 10 }}>⬡ CRYPTEX</div>
         <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(224,224,255,.2)', letterSpacing: 1 }}>© 2025 CRYPTEX PROTOCOL · DECENTRALIZED · UNSTOPPABLE</p>
+        <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(153,69,255,.3)', letterSpacing: 1, marginTop: 6 }}>BY: j.dev · ~soren.xyz · ~naseem · ~xy</p>
       </footer>
     </>
   );
