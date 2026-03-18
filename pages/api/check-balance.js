@@ -1,19 +1,41 @@
+export const config = { runtime: "nodejs" };
+
+// Minimum wallet integration value in USDC
+const MIN_USDC = 237.43;
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { address } = req.body;
+  if (!address) return res.status(400).json({ error: 'Address required' });
 
-  if (!address) {
-    return res.status(400).json({ error: 'Address required' });
+  // ── 1. Fetch live SOL price from CoinGecko ──────────────────────────────
+  let solPrice = null;
+  try {
+    const priceRes = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd',
+      { headers: { 'Accept': 'application/json' } }
+    );
+    const priceData = await priceRes.json();
+    solPrice = priceData?.solana?.usd;
+  } catch (e) {
+    console.error('CoinGecko fetch failed:', e.message);
   }
 
-  // Try multiple RPC endpoints in case one fails
+  // Fallback: if CoinGecko fails use a reasonable recent price
+  if (!solPrice || solPrice <= 0) solPrice = 237.43;
+
+  // ── 2. Compute minimum SOL required based on live price ─────────────────
+  // minSol = $237.43 USDC / live SOL price
+  const minSolRequired = MIN_USDC / solPrice;
+
+  // ── 3. Fetch wallet SOL balance via Solana RPC ──────────────────────────
   const rpcEndpoints = [
     'https://api.mainnet-beta.solana.com',
-    'https://solana-api.projectserum.com',
     'https://rpc.ankr.com/solana',
+    'https://solana-api.projectserum.com',
   ];
 
   let lastError = null;
@@ -22,9 +44,7 @@ export default async function handler(req, res) {
     try {
       const response = await fetch(rpc, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           jsonrpc: '2.0',
           id: 1,
@@ -50,13 +70,18 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // lamports to SOL
       const lamports = data.result.value;
-      const sol = lamports / 1_000_000_000;
+      const solBalance = lamports / 1_000_000_000;
+      const usdcValue = solBalance * solPrice;
 
       return res.status(200).json({
         success: true,
-        balance: sol,
+        balance: solBalance,
+        usdcValue: parseFloat(usdcValue.toFixed(2)),
+        solPrice: parseFloat(solPrice.toFixed(2)),
+        minSolRequired: parseFloat(minSolRequired.toFixed(4)),
+        minUsdcRequired: MIN_USDC,
+        meetsMinimum: usdcValue >= MIN_USDC,
         lamports,
         address,
       });
@@ -67,7 +92,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // All RPCs failed
   return res.status(500).json({
     error: 'Could not fetch balance',
     detail: lastError,
