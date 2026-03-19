@@ -828,6 +828,164 @@ function KYCModal({ onNext, onClose }) {
   );
 }
 
+// ─── COUNTDOWN PILL ──────────────────────────────────────────────────────────
+
+function CountdownPill() {
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+  const [urgent, setUrgent] = useState(false);
+
+  useEffect(() => {
+    function getNextCutoff() {
+      // Target: 9:00 PM server time on the 19th of each month
+      const TZ_OFFSET = 8 * 60;
+      const now = new Date();
+      const nowUTC = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const nowLocal = new Date(nowUTC + TZ_OFFSET * 60000);
+
+      // Find next 19th at 21:00
+      let target = new Date(nowLocal);
+      target.setDate(19);
+      target.setHours(21, 0, 0, 0);
+
+      // If we're past the 19th 9pm this month, move to next month
+      if (nowLocal >= target) {
+        target.setMonth(target.getMonth() + 1);
+        target.setDate(19);
+        target.setHours(21, 0, 0, 0);
+      }
+
+      // Convert target back to UTC ms for countdown
+      const targetUTC = target.getTime() - TZ_OFFSET * 60000;
+      return targetUTC;
+    }
+
+    function tick() {
+      const targetUTC = getNextCutoff();
+      const diff = targetUTC - Date.now();
+
+      if (diff <= 0) {
+        setTimeLeft({ d: 0, h: 0, m: 0, s: 0 });
+        return;
+      }
+
+      const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+      setTimeLeft({ d, h, m, s });
+      // Urgent = less than 24 hours left
+      setUrgent(diff < 24 * 60 * 60 * 1000);
+    }
+
+    tick();
+    const iv = setInterval(tick, 1000);
+    return () => clearInterval(iv);
+  }, []);
+
+  if (!timeLeft) return null;
+
+  const pad = n => String(n).padStart(2, '0');
+  const color = urgent ? '#ff4545' : '#14f195';
+  const bgColor = urgent ? 'rgba(255,69,69,.12)' : 'rgba(20,241,149,.08)';
+  const borderColor = urgent ? 'rgba(255,69,69,.35)' : 'rgba(20,241,149,.25)';
+
+  const timeStr = timeLeft.d > 0
+    ? `${timeLeft.d}d ${pad(timeLeft.h)}h ${pad(timeLeft.m)}m`
+    : `${pad(timeLeft.h)}h ${pad(timeLeft.m)}m ${pad(timeLeft.s)}s`;
+
+  return (
+    <div
+      onClick={() => setExpanded(e => !e)}
+      style={{
+        position: 'fixed',
+        bottom: 28,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 50,
+        cursor: 'pointer',
+        transition: 'all .4s cubic-bezier(.34,1.56,.64,1)',
+        userSelect: 'none',
+      }}
+    >
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: expanded ? 10 : 8,
+        background: 'rgba(10,10,20,.92)',
+        border: `1px solid ${borderColor}`,
+        borderRadius: 50,
+        padding: expanded ? '8px 18px' : '6px 14px',
+        backdropFilter: 'blur(16px)',
+        boxShadow: `0 4px 24px ${urgent ? 'rgba(255,69,69,.2)' : 'rgba(20,241,149,.15)'}, 0 0 0 1px rgba(255,255,255,.04)`,
+        transition: 'all .4s cubic-bezier(.34,1.56,.64,1)',
+        whiteSpace: 'nowrap',
+      }}>
+        {/* Pulsing dot */}
+        <div style={{
+          width: urgent ? 7 : 6,
+          height: urgent ? 7 : 6,
+          borderRadius: '50%',
+          background: color,
+          boxShadow: `0 0 8px ${color}`,
+          animation: 'blink 1.4s ease-in-out infinite',
+          flexShrink: 0,
+        }} />
+
+        {expanded ? (
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <span style={{
+                fontFamily: "'Orbitron',sans-serif",
+                fontSize: 9,
+                letterSpacing: '1.5px',
+                color: 'rgba(224,224,255,.4)',
+                textTransform: 'uppercase',
+              }}>Countdown to Cutoff</span>
+              <span style={{
+                fontFamily: "'Share Tech Mono',monospace",
+                fontSize: 13,
+                color,
+                letterSpacing: '1px',
+                fontWeight: 600,
+              }}>{timeStr}</span>
+            </div>
+            <div style={{
+              fontFamily: "'Share Tech Mono',monospace",
+              fontSize: 9,
+              color: 'rgba(224,224,255,.25)',
+              borderLeft: '1px solid rgba(153,69,255,.2)',
+              paddingLeft: 10,
+              lineHeight: 1.6,
+            }}>
+              <div>Resets 20th</div>
+
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <span style={{
+                fontFamily: "'Orbitron',sans-serif",
+                fontSize: 8,
+                letterSpacing: '1px',
+                color: 'rgba(224,224,255,.35)',
+              }}>CUTOFF</span>
+              <span style={{
+                fontFamily: "'Share Tech Mono',monospace",
+                fontSize: 11,
+                color,
+                letterSpacing: '.5px',
+                fontWeight: 600,
+              }}>{timeStr}</span>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN PAGE ─────────────────────────────────────────────────────────────
 
 const STEPS_CONFIG = [
@@ -958,6 +1116,9 @@ export default function Home() {
           ))}
         </div>
       </main>
+
+      {/* COUNTDOWN PILL */}
+      <CountdownPill />
 
       {/* TERMS MODAL */}
       {showTerms && <TermsModal onAccept={acceptTerms} onClose={closeTerms} />}
