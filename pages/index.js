@@ -856,8 +856,8 @@ function CountdownPill() {
       const pastCutoff =
         day > 19 ||
         (day === 19 && hour > 21) ||
-        (day === 19 && hour === 21 && minute > 0) ||
-        (day === 19 && hour === 21 && minute === 0 && second > 0);
+        (day === 19 && hour === 21 && minute > 30) ||
+        (day === 19 && hour === 21 && minute === 30 && second > 0);
 
       if (pastCutoff) {
         targetMonth += 1;
@@ -866,7 +866,7 @@ function CountdownPill() {
 
       // Target in zone as UTC epoch ms: Date.UTC treats args as UTC
       // so subtract the offset to get the real UTC moment
-      const targetUTC = Date.UTC(targetYear, targetMonth, 19, 21, 0, 0) - OFFSET_MS;
+      const targetUTC = Date.UTC(targetYear, targetMonth, 19, 21, 30, 0) - OFFSET_MS;
       return targetUTC;
     }
 
