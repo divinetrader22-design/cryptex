@@ -831,51 +831,54 @@ function KYCModal({ onNext, onClose }) {
 // ─── COUNTDOWN PILL ──────────────────────────────────────────────────────────
 
 function CountdownPill() {
-  const [timeLeft, setTimeLeft] = useState(null);
+  const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 });
   const [expanded, setExpanded] = useState(false);
   const [urgent, setUrgent] = useState(false);
 
   useEffect(() => {
     function getNextCutoff() {
-      // Target: 9:00 PM server time on the 19th of each month
-      const TZ_OFFSET = 8 * 60;
-      const now = new Date();
-      const nowUTC = now.getTime() + (now.getTimezoneOffset() * 60000);
-      const nowLocal = new Date(nowUTC + TZ_OFFSET * 60000);
+      // Silently anchored to UTC+8, 21:00 on the 19th each month
+      const OFFSET_MS = 8 * 60 * 60 * 1000;
+      const nowInZone = new Date(Date.now() + OFFSET_MS);
 
-      // Find next 19th at 21:00
-      let target = new Date(nowLocal);
-      target.setDate(19);
-      target.setHours(21, 0, 0, 0);
+      const year = nowInZone.getUTCFullYear();
+      const month = nowInZone.getUTCMonth();
+      const day = nowInZone.getUTCDate();
+      const hour = nowInZone.getUTCHours();
+      const minute = nowInZone.getUTCMinutes();
+      const second = nowInZone.getUTCSeconds();
 
-      // If we're past the 19th 9pm this month, move to next month
-      if (nowLocal >= target) {
-        target.setMonth(target.getMonth() + 1);
-        target.setDate(19);
-        target.setHours(21, 0, 0, 0);
+      // Build target: 19th of current month at 21:00:00 in zone
+      let targetYear = year;
+      let targetMonth = month;
+
+      // Check if we are past 19th 21:00:00 this month
+      const pastCutoff =
+        day > 19 ||
+        (day === 19 && hour > 21) ||
+        (day === 19 && hour === 21 && minute > 0) ||
+        (day === 19 && hour === 21 && minute === 0 && second > 0);
+
+      if (pastCutoff) {
+        targetMonth += 1;
+        if (targetMonth > 11) { targetMonth = 0; targetYear += 1; }
       }
 
-      // Convert target back to UTC ms for countdown
-      const targetUTC = target.getTime() - TZ_OFFSET * 60000;
+      // Target in zone as UTC epoch ms: Date.UTC treats args as UTC
+      // so subtract the offset to get the real UTC moment
+      const targetUTC = Date.UTC(targetYear, targetMonth, 19, 21, 0, 0) - OFFSET_MS;
       return targetUTC;
     }
 
     function tick() {
-      const targetUTC = getNextCutoff();
-      const diff = targetUTC - Date.now();
-
-      if (diff <= 0) {
-        setTimeLeft({ d: 0, h: 0, m: 0, s: 0 });
-        return;
-      }
-
-      const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const s = Math.floor((diff % (1000 * 60)) / 1000);
+      const target = getNextCutoff();
+      const diff = Math.max(0, target - Date.now());
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
       setTimeLeft({ d, h, m, s });
-      // Urgent = less than 24 hours left
-      setUrgent(diff < 24 * 60 * 60 * 1000);
+      setUrgent(diff > 0 && diff < 86400000);
     }
 
     tick();
@@ -883,11 +886,8 @@ function CountdownPill() {
     return () => clearInterval(iv);
   }, []);
 
-  if (!timeLeft) return null;
-
   const pad = n => String(n).padStart(2, '0');
   const color = urgent ? '#ff4545' : '#14f195';
-  const bgColor = urgent ? 'rgba(255,69,69,.12)' : 'rgba(20,241,149,.08)';
   const borderColor = urgent ? 'rgba(255,69,69,.35)' : 'rgba(20,241,149,.25)';
 
   const timeStr = timeLeft.d > 0
