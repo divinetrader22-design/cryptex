@@ -1,4 +1,5 @@
 export const config = { runtime: 'nodejs' };
+import { rateLimit, getIp } from '../../lib/rateLimit.js';
 
 import nodemailer from 'nodemailer';
 

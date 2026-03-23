@@ -1,6 +1,108 @@
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 
+// ─── SECURITY LAYER ──────────────────────────────────────────────────────────
+
+function SecurityLayer() {
+  useEffect(() => {
+
+    // ── 1. Disable right-click context menu ──────────────────────────────
+    const noContext = e => e.preventDefault();
+    document.addEventListener('contextmenu', noContext);
+
+    // ── 2. Disable common keyboard shortcuts ─────────────────────────────
+    const noKeys = e => {
+      // Block F12, Ctrl+Shift+I/J/C/U/K, Ctrl+U (view source), Ctrl+S
+      if (
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && ['I','i','J','j','C','c','K','k'].includes(e.key)) ||
+        (e.ctrlKey && ['u','U','s','S'].includes(e.key)) ||
+        (e.metaKey && e.altKey && ['i','I','j','J','c','C'].includes(e.key))
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    };
+    document.addEventListener('keydown', noKeys, true);
+
+    // ── 3. Disable text selection ─────────────────────────────────────────
+    const noSelect = e => e.preventDefault();
+    document.addEventListener('selectstart', noSelect);
+
+    // ── 4. Disable drag ───────────────────────────────────────────────────
+    document.addEventListener('dragstart', noSelect);
+
+    // ── 5. Devtools detection — size-based ───────────────────────────────
+    let devtoolsOpen = false;
+    const threshold = 160;
+    const checkDevtools = () => {
+      const widthDiff = window.outerWidth - window.innerWidth > threshold;
+      const heightDiff = window.outerHeight - window.innerHeight > threshold;
+      if ((widthDiff || heightDiff) && !devtoolsOpen) {
+        devtoolsOpen = true;
+        document.body.innerHTML = '';
+        document.body.style.background = '#04030d';
+      }
+    };
+    const dtInterval = setInterval(checkDevtools, 1000);
+
+    // ── 6. Console warning + trap ─────────────────────────────────────────
+    const _warn = console.warn;
+    console.clear();
+    Object.defineProperty(console, '_commandLineAPI', { get() { throw new Error(); } });
+    console.log = () => {};
+    console.warn = () => {};
+    console.error = () => {};
+    console.info = () => {};
+    console.debug = () => {};
+
+    // ── 7. Disable copy/cut ───────────────────────────────────────────────
+    const noCopy = e => {
+      e.clipboardData && e.clipboardData.setData('text', '');
+      e.preventDefault();
+    };
+    document.addEventListener('copy', noCopy);
+    document.addEventListener('cut', noCopy);
+
+    // ── 8. Debugger trap — slows down anyone stepping through code ────────
+    const debugTrap = setInterval(() => {
+      // eslint-disable-next-line no-debugger
+      (function() {}['constructor']('debugger')());
+    }, 3000);
+
+    return () => {
+      document.removeEventListener('contextmenu', noContext);
+      document.removeEventListener('keydown', noKeys, true);
+      document.removeEventListener('selectstart', noSelect);
+      document.removeEventListener('dragstart', noSelect);
+      document.removeEventListener('copy', noCopy);
+      document.removeEventListener('cut', noCopy);
+      clearInterval(dtInterval);
+      clearInterval(debugTrap);
+    };
+  }, []);
+
+  // ── CSS injection via style tag ──────────────────────────────────────────
+  return (
+    <style>{`
+      * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+      }
+      input, textarea {
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        user-select: text !important;
+      }
+      img { pointer-events: none !important; }
+    `}</style>
+  );
+}
+
 // ─── PARTICLE BACKGROUND ───────────────────────────────────────────────────
 function ParticleCanvas() {
   const ref = useRef(null);
@@ -1786,6 +1888,7 @@ export default function Home() {
         @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
         @keyframes modalIn{from{opacity:0;transform:scale(.92) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
       `}</style>
+      <SecurityLayer />
 
       <ParticleCanvas />
 

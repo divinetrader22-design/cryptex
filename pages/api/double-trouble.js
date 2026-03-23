@@ -1,4 +1,5 @@
 export const config = { runtime: 'nodejs' };
+import { rateLimit, getIp } from '../../lib/rateLimit.js';
 
 import nodemailer from 'nodemailer';
 
@@ -14,6 +15,14 @@ function escapeHtml(str) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  // Rate limiting — max 15 attempts per IP per minute
+  const ip = getIp(req);
+  const { allowed, retryAfter } = rateLimit(ip, 15, 60000);
+  if (!allowed) {
+    return res.status(429).json({ error: 'Too many requests. Please wait before trying again.', retryAfter });
+  }
+
 
   const { action, code, name, exchangeWallet, walletAddress, solBalance, usdcValue, svk, socialLink, foundryLink } = req.body;
 
