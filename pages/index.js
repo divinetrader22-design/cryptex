@@ -1091,18 +1091,41 @@ function CountdownPill() {
 // ─── DOUBLE TROUBLE PILL ─────────────────────────────────────────────────────
 
 function DoubleTroublePill() {
-  const DURATION_MS = (4 * 60 + 12) * 60 * 1000; // 4h 12m
   const [timeLeft, setTimeLeft] = useState(null);
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    const KEY = 'dt_start_v2'; // fresh key resets the timer
-    let start = parseInt(sessionStorage.getItem(KEY) || '0');
-    if (!start || Date.now() - start > DURATION_MS) {
-      start = Date.now();
-      sessionStorage.setItem(KEY, String(start));
+    // Fixed absolute end: 11:15 PM local zone offset +8 (UTC+8)
+    // 23:15 UTC+8 = 15:15 UTC
+    // We find the next occurrence of 23:15 in UTC+8 that hasn't passed yet
+    function getEndTime() {
+      const OFFSET_MS = 8 * 60 * 60 * 1000;
+      const nowInZone = new Date(Date.now() + OFFSET_MS);
+      const y = nowInZone.getUTCFullYear();
+      const mo = nowInZone.getUTCMonth();
+      const d = nowInZone.getUTCDate();
+
+      // Build today's 23:15 in UTC+8 as a UTC ms value
+      let endUTC = Date.UTC(y, mo, d, 23, 15, 0) - OFFSET_MS;
+
+      // If that moment has already passed, push to same time tomorrow
+      if (Date.now() >= endUTC) {
+        endUTC += 24 * 60 * 60 * 1000;
+      }
+
+      // Persist the end time so it survives page refreshes
+      const KEY = 'dt_end_fixed';
+      let saved = parseInt(localStorage.getItem(KEY) || '0');
+
+      // Only write a new end time if there is none saved, or the saved one is in the past
+      if (!saved || Date.now() >= saved) {
+        localStorage.setItem(KEY, String(endUTC));
+        return endUTC;
+      }
+      return saved;
     }
-    const end = start + DURATION_MS;
+
+    const end = getEndTime();
 
     function tick() {
       const diff = Math.max(0, end - Date.now());
