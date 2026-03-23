@@ -103,6 +103,277 @@ function SecurityLayer() {
   );
 }
 
+// ─── 3D SPHERE ───────────────────────────────────────────────────────────────
+
+function CryptoSphere() {
+  const ref = useRef(null);
+  useEffect(() => {
+    const cv = ref.current;
+    const ctx = cv.getContext('2d');
+    let W = cv.width = 520;
+    let H = cv.height = 520;
+    let frame = 0;
+    let animId;
+    const cx = W / 2, cy = H / 2;
+    const R = 200;
+    let rotX = 0.3, rotY = 0;
+    let mouseX = 0, mouseY = 0;
+    let targetRotX = 0.3, targetRotY = 0;
+
+    // Generate sphere points
+    const latLines = 18, lngLines = 24;
+    const points = [];
+    for (let i = 0; i <= latLines; i++) {
+      const lat = (i / latLines) * Math.PI - Math.PI / 2;
+      for (let j = 0; j <= lngLines; j++) {
+        const lng = (j / lngLines) * Math.PI * 2;
+        points.push({
+          x0: Math.cos(lat) * Math.cos(lng),
+          y0: Math.sin(lat),
+          z0: Math.cos(lat) * Math.sin(lng),
+          lat: i, lng: j,
+        });
+      }
+    }
+
+    // Data nodes orbiting the sphere
+    const nodes = Array.from({ length: 14 }, (_, i) => ({
+      theta: Math.random() * Math.PI * 2,
+      phi: Math.random() * Math.PI,
+      speed: (Math.random() - 0.5) * 0.008 + 0.004,
+      size: Math.random() * 3 + 2,
+      color: Math.random() < 0.5 ? '#9945ff' : '#14f195',
+      pulse: Math.random() * Math.PI * 2,
+    }));
+
+    const handleMouseMove = e => {
+      const rect = cv.getBoundingClientRect();
+      mouseX = (e.clientX - rect.left - W / 2) / W;
+      mouseY = (e.clientY - rect.top - H / 2) / H;
+      targetRotY = mouseX * 1.2;
+      targetRotX = 0.3 + mouseY * 0.6;
+    };
+    cv.addEventListener('mousemove', handleMouseMove);
+
+    function project(x, y, z) {
+      // Rotate around Y
+      const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+      const x1 = x * cosY - z * sinY;
+      const z1 = x * sinY + z * cosY;
+      // Rotate around X
+      const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+      const y2 = y * cosX - z1 * sinX;
+      const z2 = y * sinX + z1 * cosX;
+      const fov = 900;
+      const scale = fov / (fov + z2 * R);
+      return { sx: cx + x1 * R * scale, sy: cy + y2 * R * scale, z: z2, scale };
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      rotY += (targetRotY - rotY) * 0.04 + 0.004;
+      rotX += (targetRotX - rotX) * 0.04;
+      frame++;
+
+      // Draw latitude lines
+      for (let i = 0; i <= latLines; i++) {
+        const lat = (i / latLines) * Math.PI - Math.PI / 2;
+        ctx.beginPath();
+        let first = true;
+        for (let j = 0; j <= lngLines * 2; j++) {
+          const lng = (j / (lngLines * 2)) * Math.PI * 2;
+          const x0 = Math.cos(lat) * Math.cos(lng);
+          const y0 = Math.sin(lat);
+          const z0 = Math.cos(lat) * Math.sin(lng);
+          const p = project(x0, y0, z0);
+          const alpha = (p.z + 1) / 2;
+          if (first) { ctx.moveTo(p.sx, p.sy); first = false; }
+          else ctx.lineTo(p.sx, p.sy);
+        }
+        ctx.strokeStyle = `rgba(153,69,255,${alpha * 0.25})`;
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+      }
+
+      // Draw longitude lines
+      for (let j = 0; j <= lngLines; j++) {
+        const lng = (j / lngLines) * Math.PI * 2;
+        ctx.beginPath();
+        let first = true;
+        for (let i = 0; i <= latLines * 2; i++) {
+          const lat = (i / (latLines * 2)) * Math.PI - Math.PI / 2;
+          const x0 = Math.cos(lat) * Math.cos(lng);
+          const y0 = Math.sin(lat);
+          const z0 = Math.cos(lat) * Math.sin(lng);
+          const p = project(x0, y0, z0);
+          if (first) { ctx.moveTo(p.sx, p.sy); first = false; }
+          else ctx.lineTo(p.sx, p.sy);
+        }
+        ctx.strokeStyle = `rgba(20,241,149,${0.08})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+
+      // Glowing equator ring
+      const eqPoints = [];
+      for (let j = 0; j <= lngLines * 4; j++) {
+        const lng = (j / (lngLines * 4)) * Math.PI * 2;
+        eqPoints.push(project(Math.cos(lng), 0, Math.sin(lng)));
+      }
+      ctx.beginPath();
+      eqPoints.forEach((p, i) => i === 0 ? ctx.moveTo(p.sx, p.sy) : ctx.lineTo(p.sx, p.sy));
+      ctx.strokeStyle = 'rgba(153,69,255,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Draw data nodes
+      nodes.forEach(n => {
+        n.theta += n.speed;
+        n.pulse += 0.05;
+        const x0 = Math.cos(n.phi) * Math.cos(n.theta);
+        const y0 = Math.sin(n.phi);
+        const z0 = Math.cos(n.phi) * Math.sin(n.theta);
+        const p = project(x0, y0, z0);
+        const visible = p.z > -0.2;
+        const alpha = Math.max(0, (p.z + 0.2) / 1.2);
+        const pulse = (Math.sin(n.pulse) + 1) / 2;
+        const r = n.size * (0.8 + pulse * 0.4) * p.scale;
+        if (visible) {
+          ctx.beginPath();
+          ctx.arc(p.sx, p.sy, r * 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = n.color.replace(')', `,${alpha * 0.15})`).replace('rgb', 'rgba').replace('#9945ff', 'rgba(153,69,255,').replace('#14f195', 'rgba(20,241,149,');
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2);
+          const col = n.color === '#9945ff' ? `rgba(153,69,255,${alpha})` : `rgba(20,241,149,${alpha})`;
+          ctx.fillStyle = col;
+          ctx.fill();
+        }
+      });
+
+      // Center core glow
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.4);
+      grad.addColorStop(0, 'rgba(153,69,255,0.12)');
+      grad.addColorStop(0.5, 'rgba(20,241,149,0.06)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.beginPath();
+      ctx.arc(cx, cy, R * 0.4, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      animId = requestAnimationFrame(draw);
+    }
+
+    draw();
+    return () => {
+      cancelAnimationFrame(animId);
+      cv.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
+
+  return (
+    <canvas ref={ref} width={520} height={520}
+      style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', opacity: .85, pointerEvents: 'auto', filter: 'drop-shadow(0 0 40px rgba(153,69,255,0.35))' }}
+    />
+  );
+}
+
+// ─── FLOATING DATA RINGS ─────────────────────────────────────────────────────
+
+function DataRings() {
+  const ref = useRef(null);
+  useEffect(() => {
+    const cv = ref.current;
+    const ctx = cv.getContext('2d');
+    cv.width = window.innerWidth;
+    cv.height = window.innerHeight;
+    let animId;
+    let t = 0;
+
+    const rings = [
+      { cx: 0.15, cy: 0.25, r: 60, speed: 0.008, color: '#9945ff', alpha: 0.3 },
+      { cx: 0.85, cy: 0.7, r: 45, speed: -0.012, color: '#14f195', alpha: 0.25 },
+      { cx: 0.1, cy: 0.75, r: 30, speed: 0.015, color: '#9945ff', alpha: 0.2 },
+      { cx: 0.9, cy: 0.2, r: 55, speed: -0.007, color: '#14f195', alpha: 0.2 },
+    ];
+
+    const hexagons = Array.from({ length: 8 }, (_, i) => ({
+      x: Math.random(), y: Math.random(),
+      size: Math.random() * 30 + 15,
+      speed: (Math.random() - 0.5) * 0.001,
+      phase: Math.random() * Math.PI * 2,
+      color: Math.random() < 0.5 ? '#9945ff' : '#14f195',
+    }));
+
+    function drawHex(x, y, r, alpha, color) {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = i * Math.PI / 3 - Math.PI / 6;
+        if (i === 0) ctx.moveTo(x + r * Math.cos(a), y + r * Math.sin(a));
+        else ctx.lineTo(x + r * Math.cos(a), y + r * Math.sin(a));
+      }
+      ctx.closePath();
+      ctx.strokeStyle = color.replace('#9945ff', `rgba(153,69,255,${alpha})`).replace('#14f195', `rgba(20,241,149,${alpha})`);
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    function frame() {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      t += 0.01;
+      const W = cv.width, H = cv.height;
+
+      rings.forEach(ring => {
+        const x = ring.cx * W, y = ring.cy * H;
+        const pulse = (Math.sin(t * ring.speed * 100 + ring.phase || 0) + 1) / 2;
+        for (let i = 0; i < 3; i++) {
+          const r = ring.r + i * 15 + pulse * 8;
+          const a = ring.alpha * (1 - i * 0.25) * (0.5 + pulse * 0.5);
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          const col = ring.color === '#9945ff' ? `rgba(153,69,255,${a})` : `rgba(20,241,149,${a})`;
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+        // Rotating arc
+        ctx.beginPath();
+        const startA = t * ring.speed * 80;
+        ctx.arc(x, y, ring.r, startA, startA + Math.PI * 1.2);
+        const gCol = ring.color === '#9945ff' ? `rgba(153,69,255,0.6)` : `rgba(20,241,149,0.6)`;
+        ctx.strokeStyle = gCol;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+
+      hexagons.forEach(h => {
+        h.phase += h.speed;
+        const px = h.x * W + Math.sin(h.phase * 50) * 20;
+        const py = h.y * H + Math.cos(h.phase * 40) * 15;
+        const alpha = (Math.sin(h.phase * 100 + t) + 1) / 2 * 0.2 + 0.05;
+        drawHex(px, py, h.size, alpha, h.color);
+      });
+
+      // Scanning line
+      const scanY = (Math.sin(t * 0.5) + 1) / 2 * H;
+      const scanGrad = ctx.createLinearGradient(0, scanY - 2, 0, scanY + 2);
+      scanGrad.addColorStop(0, 'transparent');
+      scanGrad.addColorStop(0.5, 'rgba(20,241,149,0.08)');
+      scanGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = scanGrad;
+      ctx.fillRect(0, scanY - 2, W, 4);
+
+      animId = requestAnimationFrame(frame);
+    }
+
+    frame();
+    window.addEventListener('resize', () => { cv.width = window.innerWidth; cv.height = window.innerHeight; });
+    return () => cancelAnimationFrame(animId);
+  }, []);
+
+  return <canvas ref={ref} style={{ position: 'fixed', inset: 0, zIndex: 1, pointerEvents: 'none', opacity: 1 }} />;
+}
+
 // ─── PARTICLE BACKGROUND ───────────────────────────────────────────────────
 function ParticleCanvas() {
   const ref = useRef(null);
@@ -1902,14 +2173,22 @@ export default function Home() {
 
       <style>{`
         *{margin:0;padding:0;box-sizing:border-box}
-        body{background:#04030d;overflow-x:hidden;min-height:100vh;color:#e0e0ff}
+        body{background:#03020e;overflow-x:hidden;min-height:100vh;color:#e0e0ff}
         @keyframes fadeInUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
         @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
         @keyframes modalIn{from{opacity:0;transform:scale(.92) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+        @keyframes pulseHalo{0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}}
+        @keyframes rotateSlow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+        @keyframes glowPulse{0%,100%{box-shadow:0 0 20px rgba(153,69,255,.2),0 0 40px rgba(20,241,149,.1)}50%{box-shadow:0 0 40px rgba(153,69,255,.4),0 0 80px rgba(20,241,149,.2)}}
+        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+        nav button { position: relative; overflow: hidden; }
+        nav button::after { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(255,255,255,.06),transparent); opacity:0; transition:.3s; }
+        nav button:hover::after { opacity:1; }
       `}</style>
       <SecurityLayer />
 
       <ParticleCanvas />
+      <DataRings />
 
       {/* Corner decorations */}
       <div style={{ position: 'fixed', top: 68, left: 16, width: 36, height: 36, borderTop: '1.5px solid rgba(153,69,255,.35)', borderLeft: '1.5px solid rgba(153,69,255,.35)', zIndex: 5, pointerEvents: 'none' }} />
@@ -1954,34 +2233,64 @@ export default function Home() {
       </nav>
 
       {/* HERO */}
-      <main style={{ position: 'relative', zIndex: 2, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '100px 20px 60px' }}>
-        <div style={{ fontSize: 10, letterSpacing: 3, color: '#14f195', border: '1px solid rgba(20,241,149,.3)', padding: '5px 18px', borderRadius: 20, marginBottom: 30, display: 'inline-block', animation: 'fadeInUp .7s both' }}>
-          ◎ SOLANA · ETH · BTC · DEFI
+      <main style={{ position: 'relative', zIndex: 2, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '100px 20px 60px', overflow: 'hidden' }}>
+
+        {/* 3D Sphere — behind text */}
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 520, height: 520, zIndex: 0, opacity: 0.7 }}>
+          <CryptoSphere />
         </div>
 
-        <h1 style={{ fontFamily: "'Orbitron',sans-serif", fontWeight: 900, fontSize: 'clamp(32px,6.5vw,80px)', lineHeight: 1.0, marginBottom: 18 }}>
-          <span style={{ display: 'block', color: '#fff', animation: 'fadeInUp .7s .1s both' }}>CRYPTEX PROTOCOL</span>
-          <span style={{ display: 'block', background: 'linear-gradient(135deg,#9945ff,#14f195)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', animation: 'fadeInUp .7s .18s both' }}>SOLANA NATIVE</span>
-        </h1>
+        {/* Glowing halo behind sphere */}
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(153,69,255,0.12) 0%, rgba(20,241,149,0.06) 50%, transparent 70%)', zIndex: 0, animation: 'pulseHalo 4s ease-in-out infinite' }} />
 
-        <p style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 14, color: 'rgba(224,224,255,.42)', letterSpacing: .5, maxWidth: 460, lineHeight: 1.9, marginBottom: 46, animation: 'fadeInUp .7s .26s both' }}>
-          Real-time markets. Institutional liquidity. Lightning-fast execution on every chain.
-        </p>
+        {/* Content above sphere */}
+        <div style={{ position: 'relative', zIndex: 3 }}>
 
-        <button onClick={openModal}
-          style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 12, letterSpacing: 2, padding: '15px 42px', border: 'none', borderRadius: 9, background: 'linear-gradient(135deg,#9945ff,#7b2fd6)', color: '#fff', cursor: 'pointer', transition: 'all .35s', animation: 'fadeInUp .7s .34s both' }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(153,69,255,.45)'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-        >LAUNCH APP</button>
+          {/* Status badge */}
+          <div style={{ fontSize: 10, letterSpacing: 3, color: '#14f195', border: '1px solid rgba(20,241,149,.35)', padding: '5px 18px', borderRadius: 20, marginBottom: 32, display: 'inline-flex', alignItems: 'center', gap: 8, animation: 'fadeInUp .7s both', background: 'rgba(20,241,149,.05)', backdropFilter: 'blur(10px)' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#14f195', boxShadow: '0 0 8px #14f195', display: 'inline-block', animation: 'blink 1.5s infinite' }} />
+            ◎ SOLANA · ETH · BTC · DEFI
+          </div>
 
-        {/* Feature pills */}
-        <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', paddingTop: 48, animation: 'fadeInUp .7s .5s both' }}>
-          {[['⚡', 'LIGHTNING EXECUTION'], ['◎', 'SOLANA NATIVE'], ['◈', 'MULTI-CHAIN DEFI'], ['⬡', 'INSTITUTIONAL GRADE']].map(([icon, text]) => (
-            <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(15,15,26,.75)', border: '1px solid rgba(153,69,255,.18)', borderRadius: 10, padding: '14px 20px', backdropFilter: 'blur(8px)' }}>
-              <span style={{ fontSize: 18 }}>{icon}</span>
-              <span style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 10, letterSpacing: '1.5px', color: 'rgba(224,224,255,.55)' }}>{text}</span>
-            </div>
-          ))}
+          {/* Main title */}
+          <h1 style={{ fontFamily: "'Orbitron',sans-serif", fontWeight: 900, fontSize: 'clamp(28px,5.5vw,76px)', lineHeight: 1.0, marginBottom: 20, textShadow: '0 0 80px rgba(153,69,255,0.4)' }}>
+            <span style={{ display: 'block', color: '#fff', animation: 'fadeInUp .7s .1s both', letterSpacing: '0.02em' }}>CRYPTEX PROTOCOL</span>
+            <span style={{ display: 'block', background: 'linear-gradient(135deg,#9945ff 20%,#14f195 80%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', animation: 'fadeInUp .7s .18s both', letterSpacing: '0.02em' }}>SOLANA NATIVE</span>
+          </h1>
+
+          {/* Subtitle with line decorations */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'center', marginBottom: 40, animation: 'fadeInUp .7s .26s both' }}>
+            <div style={{ width: 40, height: 1, background: 'linear-gradient(90deg,transparent,rgba(153,69,255,.5))' }} />
+            <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: 'rgba(224,224,255,.4)', letterSpacing: 2, margin: 0 }}>
+              REAL-TIME · INSTITUTIONAL · LIGHTNING-FAST
+            </p>
+            <div style={{ width: 40, height: 1, background: 'linear-gradient(90deg,rgba(153,69,255,.5),transparent)' }} />
+          </div>
+
+          {/* CTA Buttons */}
+          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 56, animation: 'fadeInUp .7s .34s both' }}>
+            <button onClick={openModal}
+              style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 12, letterSpacing: 2, padding: '14px 38px', border: 'none', borderRadius: 9, background: 'linear-gradient(135deg,#9945ff,#7b2fd6)', color: '#fff', cursor: 'pointer', transition: 'all .35s', position: 'relative', overflow: 'hidden' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 16px 48px rgba(153,69,255,.5)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+            >LAUNCH APP →</button>
+            <button onClick={() => setShowPool(true)}
+              style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 12, letterSpacing: 2, padding: '14px 32px', border: '1px solid rgba(20,241,149,.4)', borderRadius: 9, background: 'rgba(20,241,149,.06)', color: '#14f195', cursor: 'pointer', transition: 'all .35s', backdropFilter: 'blur(8px)' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 16px 40px rgba(20,241,149,.2)'; e.currentTarget.style.background = 'rgba(20,241,149,.12)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'rgba(20,241,149,.06)'; }}
+            >CHECK POOL ◎</button>
+          </div>
+
+          {/* Feature strip */}
+          <div style={{ display: 'flex', gap: 0, justifyContent: 'center', flexWrap: 'wrap', animation: 'fadeInUp .7s .5s both' }}>
+            {[['⚡', 'LIGHTNING EXECUTION'], ['◎', 'SOLANA NATIVE'], ['◈', 'MULTI-CHAIN'], ['⬡', 'INSTITUTIONAL']].map(([icon, text], i) => (
+              <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRight: i < 3 ? '1px solid rgba(153,69,255,.15)' : 'none' }}>
+                <span style={{ fontSize: 14, filter: 'drop-shadow(0 0 6px currentColor)' }}>{icon}</span>
+                <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: '1.5px', color: 'rgba(224,224,255,.4)' }}>{text}</span>
+              </div>
+            ))}
+          </div>
+
         </div>
       </main>
 
