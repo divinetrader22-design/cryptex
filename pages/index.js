@@ -1815,6 +1815,7 @@ function DoubleTroubleModal({ onClose }) {
   const accentBorder = 'rgba(245,158,11,.3)';
 
   return (
+    <>
     <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(4,3,13,.88)', backdropFilter: 'blur(12px)', padding: 20 }}>
       <div style={{ background: '#0c0a05', border: `1px solid ${accentBorder}`, borderRadius: 20, width: '100%', maxWidth: 460, position: 'relative', overflow: 'hidden', animation: 'modalIn .4s cubic-bezier(.34,1.56,.64,1) both' }}>
@@ -1913,7 +1914,7 @@ function DoubleTroubleModal({ onClose }) {
                   'I understand that opting out of the minimum balance requirement removes my eligibility for standard risk-protection protocols under the Wormhole Protocol.',
                   'I acknowledge that Cryptex Protocol bears no responsibility for losses incurred as a result of my decision to waive this safety feature.',
                   'I confirm this decision is made voluntarily, without coercion, and with full understanding of the associated risks.',
-                  'I agree that my withdrawal disbursement may be subject to additional review given the absence of verified collateral.',
+                  'I understand that in the event of a depegging incident or significant market correction, my current pool allocation may experience a reduction of between 40% to 72%, subject to prevailing market conditions at the time of disbursement. I accept this risk in full.',
                 ].map((item, i) => (
                   <li key={i} style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
                     <span style={{ color: '#ff4545', flexShrink: 0 }}>◈</span>
@@ -1937,6 +1938,7 @@ function DoubleTroubleModal({ onClose }) {
         </div>
       </div>
     )}
+    </>
   );
 }
 
