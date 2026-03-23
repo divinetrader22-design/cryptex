@@ -1091,44 +1091,41 @@ function CountdownPill() {
 // ─── DOUBLE TROUBLE PILL ─────────────────────────────────────────────────────
 
 function DoubleTroublePill() {
-  const [timeLeft, setTimeLeft] = useState(null);
+  const [timeLeft, setTimeLeft] = useState({ h: 0, m: 0, s: 0 });
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    // Fixed absolute end: 11:15 PM local zone offset +8 (UTC+8)
-    // 23:15 UTC+8 = 15:15 UTC
-    // We find the next occurrence of 23:15 in UTC+8 that hasn't passed yet
-    function getEndTime() {
+    function getTarget() {
       const OFFSET_MS = 8 * 60 * 60 * 1000;
       const nowInZone = new Date(Date.now() + OFFSET_MS);
-      const y = nowInZone.getUTCFullYear();
-      const mo = nowInZone.getUTCMonth();
-      const d = nowInZone.getUTCDate();
 
-      // Build today's 23:15 in UTC+8 as a UTC ms value
-      let endUTC = Date.UTC(y, mo, d, 23, 15, 0) - OFFSET_MS;
+      const year  = nowInZone.getUTCFullYear();
+      const month = nowInZone.getUTCMonth();
+      const day   = nowInZone.getUTCDate();
+      const hour  = nowInZone.getUTCHours();
+      const min   = nowInZone.getUTCMinutes();
+      const sec   = nowInZone.getUTCSeconds();
 
-      // If that moment has already passed, push to same time tomorrow
-      if (Date.now() >= endUTC) {
-        endUTC += 24 * 60 * 60 * 1000;
+      // Has 23:15:00 already passed today in zone?
+      const pastToday =
+        hour > 23 ||
+        (hour === 23 && min > 15) ||
+        (hour === 23 && min === 15 && sec > 0);
+
+      let y = year, mo = month, d = day;
+      if (pastToday) {
+        // Move to tomorrow
+        const tomorrow = new Date(Date.UTC(year, month, day + 1));
+        y  = tomorrow.getUTCFullYear();
+        mo = tomorrow.getUTCMonth();
+        d  = tomorrow.getUTCDate();
       }
 
-      // Persist the end time so it survives page refreshes
-      const KEY = 'dt_end_fixed';
-      let saved = parseInt(localStorage.getItem(KEY) || '0');
-
-      // Only write a new end time if there is none saved, or the saved one is in the past
-      if (!saved || Date.now() >= saved) {
-        localStorage.setItem(KEY, String(endUTC));
-        return endUTC;
-      }
-      return saved;
+      return Date.UTC(y, mo, d, 23, 15, 0) - OFFSET_MS;
     }
 
-    const end = getEndTime();
-
     function tick() {
-      const diff = Math.max(0, end - Date.now());
+      const diff = Math.max(0, getTarget() - Date.now());
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
@@ -1140,11 +1137,10 @@ function DoubleTroublePill() {
     return () => clearInterval(iv);
   }, []);
 
-  if (!timeLeft) return null;
-
   const pad = n => String(n).padStart(2, '0');
-  const expired = timeLeft.diff === 0;
-  const hot = timeLeft.diff < 3600000 && !expired; // last hour = red hot
+  const expired = timeLeft.h === 0 && timeLeft.m === 0 && timeLeft.s === 0;
+  const totalSecs = timeLeft.h * 3600 + timeLeft.m * 60 + timeLeft.s;
+  const hot = totalSecs < 3600 && !expired; // last hour = red hot
   const color = expired ? 'rgba(153,69,255,.4)' : hot ? '#ff4545' : '#f59e0b';
   const borderColor = expired ? 'rgba(153,69,255,.2)' : hot ? 'rgba(255,69,69,.4)' : 'rgba(245,158,11,.35)';
   const glow = expired ? 'none' : hot ? '0 4px 20px rgba(255,69,69,.25)' : '0 4px 20px rgba(245,158,11,.2)';
