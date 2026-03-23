@@ -37,25 +37,28 @@ function SecurityLayer() {
     let devtoolsOpen = false;
     const threshold = 160;
     const checkDevtools = () => {
+      if (typeof window === 'undefined') return;
       const widthDiff = window.outerWidth - window.innerWidth > threshold;
       const heightDiff = window.outerHeight - window.innerHeight > threshold;
       if ((widthDiff || heightDiff) && !devtoolsOpen) {
         devtoolsOpen = true;
         document.body.innerHTML = '';
-        document.body.style.background = '#04030d';
+        document.body.style.background = '#03020e';
       }
     };
     const dtInterval = setInterval(checkDevtools, 1000);
 
-    // ── 6. Console warning + trap ─────────────────────────────────────────
-    const _warn = console.warn;
-    console.clear();
-    Object.defineProperty(console, '_commandLineAPI', { get() { throw new Error(); } });
-    console.log = () => {};
-    console.warn = () => {};
-    console.error = () => {};
-    console.info = () => {};
-    console.debug = () => {};
+    // ── 6. Console silencer ──────────────────────────────────────────────
+    if (typeof window !== 'undefined') {
+      try {
+        console.clear();
+        console.log = () => {};
+        console.warn = () => {};
+        console.error = () => {};
+        console.info = () => {};
+        console.debug = () => {};
+      } catch(_) {}
+    }
 
     // ── 7. Disable copy/cut ───────────────────────────────────────────────
     const noCopy = e => {
@@ -65,11 +68,8 @@ function SecurityLayer() {
     document.addEventListener('copy', noCopy);
     document.addEventListener('cut', noCopy);
 
-    // ── 8. Debugger trap — slows down anyone stepping through code ────────
-    const debugTrap = setInterval(() => {
-      // eslint-disable-next-line no-debugger
-      (function() {}['constructor']('debugger')());
-    }, 3000);
+    // ── 8. Debugger trap placeholder ────────────────────────────────────
+    const debugTrap = setInterval(() => {}, 99999);
 
     return () => {
       document.removeEventListener('contextmenu', noContext);
@@ -107,7 +107,10 @@ function SecurityLayer() {
 
 function CryptoSphere() {
   const ref = useRef(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
+    if (!mounted) return;
     const cv = ref.current;
     const ctx = cv.getContext('2d');
     let W = cv.width = 520;
@@ -271,6 +274,7 @@ function CryptoSphere() {
     };
   }, []);
 
+  if (!mounted) return null;
   return (
     <canvas ref={ref} width={520} height={520}
       style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', opacity: .85, pointerEvents: 'auto', filter: 'drop-shadow(0 0 40px rgba(153,69,255,0.35))' }}
@@ -282,7 +286,10 @@ function CryptoSphere() {
 
 function DataRings() {
   const ref = useRef(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
+    if (!mounted) return;
     const cv = ref.current;
     const ctx = cv.getContext('2d');
     cv.width = window.innerWidth;
@@ -371,6 +378,7 @@ function DataRings() {
     return () => cancelAnimationFrame(animId);
   }, []);
 
+  if (!mounted) return null;
   return <canvas ref={ref} style={{ position: 'fixed', inset: 0, zIndex: 1, pointerEvents: 'none', opacity: 1 }} />;
 }
 
