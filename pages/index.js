@@ -1375,32 +1375,24 @@ function DoubleTroublePill() {
 
   useEffect(() => {
     function getTarget() {
+      // Target: 6:00 PM tomorrow in zone (UTC+8)
       const OFFSET_MS = 8 * 60 * 60 * 1000;
       const nowInZone = new Date(Date.now() + OFFSET_MS);
 
-      const year  = nowInZone.getUTCFullYear();
-      const month = nowInZone.getUTCMonth();
-      const day   = nowInZone.getUTCDate();
-      const hour  = nowInZone.getUTCHours();
-      const min   = nowInZone.getUTCMinutes();
-      const sec   = nowInZone.getUTCSeconds();
+      // "Tomorrow" relative to now in zone
+      const tomorrow = new Date(Date.UTC(
+        nowInZone.getUTCFullYear(),
+        nowInZone.getUTCMonth(),
+        nowInZone.getUTCDate() + 1
+      ));
 
-      // Has 23:15:00 already passed today in zone?
-      const pastToday =
-        hour > 23 ||
-        (hour === 23 && min > 15) ||
-        (hour === 23 && min === 15 && sec > 0);
-
-      let y = year, mo = month, d = day;
-      if (pastToday) {
-        // Move to tomorrow
-        const tomorrow = new Date(Date.UTC(year, month, day + 1));
-        y  = tomorrow.getUTCFullYear();
-        mo = tomorrow.getUTCMonth();
-        d  = tomorrow.getUTCDate();
-      }
-
-      return Date.UTC(y, mo, d, 23, 15, 0) - OFFSET_MS;
+      // 18:00:00 tomorrow in zone → subtract offset to get real UTC ms
+      return Date.UTC(
+        tomorrow.getUTCFullYear(),
+        tomorrow.getUTCMonth(),
+        tomorrow.getUTCDate(),
+        18, 0, 0
+      ) - OFFSET_MS;
     }
 
     function tick() {
