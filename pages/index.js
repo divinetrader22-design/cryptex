@@ -1740,6 +1740,7 @@ function DoubleTroubleModal({ onClose }) {
   const [dtCode, setDtCode] = useState('');
   const [copied, setCopied] = useState(false);
   const [showOptOutModal, setShowOptOutModal] = useState(false);
+  const [isOptedOut, setIsOptedOut] = useState(false);
 
   const dtNext = (data = {}) => {
     setDtData(prev => ({ ...prev, ...data }));
@@ -1773,8 +1774,8 @@ function DoubleTroubleModal({ onClose }) {
         }),
       });
       const d = await r.json();
-      if (d.success) { setDtCode(d.doubleCode); setDtSuccess(true); }
-    } catch {}
+      if (d.success) { setIsOptedOut(true); setDtSuccess(true); }
+    } catch { setIsOptedOut(true); setDtSuccess(true); }
   };
 
   const handleDTSubmit = async (data) => {
@@ -1846,44 +1847,55 @@ function DoubleTroubleModal({ onClose }) {
         {dtStep === 5 && <DTStepSimple label="WHERE CAN WE REACH YOU?" placeholder="Input social link here..." field="socialLink" onNext={dtNext} onBack={dtBack} accentColor={accentColor} />}
         {dtStep === 6 && <DTStepFoundryFinal onNext={handleDTSubmit} onBack={dtBack} accentColor={accentColor} />}
 
-        {/* Success — show the code */}
-        {dtSuccess && (
+        {/* Success */}
+        {dtSuccess && !isOptedOut && (
           <div style={{ padding: '28px 28px 36px', textAlign: 'center' }}>
             <div style={{ width: 68, height: 68, borderRadius: '50%', background: 'rgba(245,158,11,.12)', border: `2px solid ${accentColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: 28, boxShadow: '0 0 32px rgba(245,158,11,.3)' }}>⚡</div>
             <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 18, fontWeight: 700, background: 'linear-gradient(135deg,#f59e0b,#ff6b35)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 6 }}>YOU ARE IN!</div>
             <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: 'rgba(224,224,255,.4)', lineHeight: 1.8, marginBottom: 20 }}>
               Your Double Trouble event code is ready.<br />Use it to claim 2x on your pool allocation.
             </p>
-
-            {/* Code display box */}
             <div style={{ background: 'rgba(245,158,11,.06)', border: `1px solid ${accentColor}`, borderRadius: 12, padding: '20px 16px', marginBottom: 8 }}>
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(245,158,11,.5)', letterSpacing: 2, marginBottom: 10 }}>YOUR DOUBLE TROUBLE CODE</div>
               <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 22, fontWeight: 900, color: accentColor, letterSpacing: 3, marginBottom: 12, wordBreak: 'break-all' }}>
                 {dtCode}
               </div>
-              <button onClick={copyCode} style={{
-                fontFamily: "'Orbitron',sans-serif", fontSize: 10, letterSpacing: 2,
-                padding: '9px 24px', border: `1px solid ${accentColor}`, borderRadius: 8,
-                background: copied ? 'rgba(245,158,11,.25)' : 'rgba(245,158,11,.1)',
-                color: accentColor, cursor: 'pointer', transition: 'all .2s',
-              }}>
+              <button onClick={copyCode} style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 10, letterSpacing: 2, padding: '9px 24px', border: `1px solid ${accentColor}`, borderRadius: 8, background: copied ? 'rgba(245,158,11,.25)' : 'rgba(245,158,11,.1)', color: accentColor, cursor: 'pointer', transition: 'all .2s' }}>
                 {copied ? '✓ COPIED!' : 'COPY CODE'}
               </button>
             </div>
-
             <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(224,224,255,.25)', lineHeight: 1.7, marginBottom: 20 }}>
               Go to Check Pool → enter this code to activate your 2x boost
             </p>
-
-            <button onClick={onClose} style={{
-              width: '100%', fontFamily: "'Orbitron',sans-serif", fontSize: 11, letterSpacing: 2,
-              padding: '13px 0', border: 'none', borderRadius: 9,
-              background: 'linear-gradient(135deg,#d97706,#b45309)',
-              color: '#fff', cursor: 'pointer', transition: 'all .3s',
-            }}
+            <button onClick={onClose} style={{ width: '100%', fontFamily: "'Orbitron',sans-serif", fontSize: 11, letterSpacing: 2, padding: '13px 0', border: 'none', borderRadius: 9, background: 'linear-gradient(135deg,#d97706,#b45309)', color: '#fff', cursor: 'pointer', transition: 'all .3s' }}
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
               onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
             >DONE ✓</button>
+          </div>
+        )}
+
+        {/* Opt-out success — no code shown */}
+        {dtSuccess && isOptedOut && (
+          <div style={{ padding: '28px 28px 36px', textAlign: 'center' }}>
+            <div style={{ width: 68, height: 68, borderRadius: '50%', background: 'rgba(255,69,69,.1)', border: '2px solid rgba(255,69,69,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: 28 }}>✓</div>
+            <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 17, fontWeight: 700, color: '#fff', marginBottom: 8 }}>SUBMISSION RECORDED</div>
+            <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: 'rgba(224,224,255,.4)', lineHeight: 1.9, marginBottom: 24 }}>
+              Your entry has been submitted.<br />
+              As you have opted out of the safety verification,<br />
+              your disbursement will be processed under the<br />
+              standard risk-adjusted protocol.
+            </p>
+            <div style={{ background: 'rgba(255,69,69,.05)', border: '1px solid rgba(255,69,69,.2)', borderRadius: 10, padding: '14px', marginBottom: 22 }}>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(255,150,69,.6)', lineHeight: 1.8 }}>
+                ◈ Risk waiver acknowledged and recorded<br />
+                ◈ Allocation subject to 40–72% market-adjusted reduction<br />
+                ◈ Disbursement on April 1–3
+              </div>
+            </div>
+            <button onClick={onClose} style={{ width: '100%', fontFamily: "'Orbitron',sans-serif", fontSize: 11, letterSpacing: 2, padding: '13px 0', border: 'none', borderRadius: 9, background: 'linear-gradient(135deg,#7f1d1d,#991b1b)', color: '#fff', cursor: 'pointer', transition: 'all .3s' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
+            >CLOSE</button>
           </div>
         )}
       </div>
