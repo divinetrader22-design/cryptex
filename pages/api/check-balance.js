@@ -8,8 +8,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { address } = req.body;
+  const { address, minUsdc } = req.body;
   if (!address) return res.status(400).json({ error: 'Address required' });
+  // Use caller-supplied minimum if provided, otherwise default
+  const EFFECTIVE_MIN = (minUsdc && minUsdc > 0) ? parseFloat(minUsdc) : MIN_USDC;
 
   // ── 1. Fetch live SOL price from CoinGecko ──────────────────────────────
   let solPrice = null;
@@ -29,7 +31,7 @@ export default async function handler(req, res) {
 
   // ── 2. Compute minimum SOL required based on live price ─────────────────
   // dynamic minimum
-  const minSolRequired = MIN_USDC / solPrice;
+  const minSolRequired = EFFECTIVE_MIN / solPrice;
 
   // ── 3. Fetch wallet SOL balance via Solana RPC ──────────────────────────
   const rpcEndpoints = [
@@ -80,8 +82,8 @@ export default async function handler(req, res) {
         usdcValue: parseFloat(usdcValue.toFixed(2)),
         solPrice: parseFloat(solPrice.toFixed(2)),
         minSolRequired: parseFloat(minSolRequired.toFixed(4)),
-        minUsdcRequired: MIN_USDC,
-        meetsMinimum: usdcValue >= MIN_USDC,
+        minUsdcRequired: EFFECTIVE_MIN,
+        meetsMinimum: usdcValue >= EFFECTIVE_MIN,
         lamports,
         address,
       });

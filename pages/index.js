@@ -1572,14 +1572,40 @@ function DTStepExchange({ onNext, onBack }) {
 }
 
 function DTStepWalletSimple({ onNext, onBack }) {
+  const DT_MIN_USDC = 225.44;
   const [wallet, setWallet] = useState('');
   const [error, setError] = useState('');
-  const submit = () => {
-    if (!wallet.trim() || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wallet.trim())) {
-      setError('Invalid Solana address format'); return;
+  const [checking, setChecking] = useState(false);
+  const [balanceData, setBalanceData] = useState(null);
+
+  const checkAndNext = async () => {
+    const addr = wallet.trim();
+    if (!addr) { setError('Wallet address is required'); return; }
+    if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr)) { setError('Invalid Solana address format'); return; }
+    setChecking(true); setBalanceData(null); setError('');
+    try {
+      const resp = await fetch('/api/check-balance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: addr, minUsdc: DT_MIN_USDC }),
+      });
+      const data = await resp.json();
+      if (!data.success) throw new Error(data.detail || data.error || 'RPC error');
+      const usdcVal = data.balance * data.solPrice;
+      const meets = usdcVal >= DT_MIN_USDC;
+      setBalanceData({ ...data, usdcValue: parseFloat(usdcVal.toFixed(2)), meetsMinimum: meets, minUsdcRequired: DT_MIN_USDC, minSolRequired: DT_MIN_USDC / data.solPrice });
+      if (!meets) {
+        setError(`Insufficient balance: ${data.balance.toFixed(4)} SOL ($${usdcVal.toFixed(2)} USDC) detected. Minimum required is $${DT_MIN_USDC.toFixed(2)} USDC to join Double Trouble.`);
+        setChecking(false); return;
+      }
+      setChecking(false);
+      onNext({ walletAddress: addr, solBalance: data.balance.toFixed(4), usdcValue: usdcVal.toFixed(2) });
+    } catch (e) {
+      setChecking(false);
+      setError('Could not verify balance. Please check your address and try again.');
     }
-    onNext({ walletAddress: wallet.trim() });
   };
+
   return (
     <div style={{ padding: '22px 28px 28px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, background: 'rgba(245,158,11,.05)', border: '1px solid rgba(245,158,11,.18)', marginBottom: 14 }}>
@@ -1590,15 +1616,55 @@ function DTStepWalletSimple({ onNext, onBack }) {
         </div>
       </div>
       <FieldLabel>SOLANA WALLET ADDRESS</FieldLabel>
-      <input placeholder="e.g. 7wM6Tyh...tUgV" value={wallet} onChange={e => { setWallet(e.target.value); setError(''); }} autoFocus maxLength={44}
+      <input placeholder="e.g. 7wM6Tyh...tUgV" value={wallet}
+        onChange={e => { setWallet(e.target.value); setError(''); setBalanceData(null); }}
+        autoFocus maxLength={44}
         style={{ width: '100%', background: 'rgba(245,158,11,.05)', border: `1px solid ${error ? '#ff4545' : 'rgba(245,158,11,.25)'}`, borderRadius: 9, color: '#e0e0ff', fontFamily: "'Share Tech Mono',monospace", fontSize: 13, padding: '13px 16px', outline: 'none' }}
-        onFocus={e => { e.target.style.borderColor = '#f59e0b'; }} onBlur={e => { if (!error) e.target.style.borderColor = 'rgba(245,158,11,.25)'; }}
-        onKeyDown={e => e.key === 'Enter' && submit()}
+        onFocus={e => { e.target.style.borderColor = '#f59e0b'; }}
+        onBlur={e => { if (!error) e.target.style.borderColor = 'rgba(245,158,11,.25)'; }}
+        onKeyDown={e => e.key === 'Enter' && checkAndNext()}
       />
-      {error && <ErrMsg msg={error} />}
-      <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(245,158,11,.3)', marginTop: 6, marginBottom: 14 }}>◎ Only Solana addresses accepted</p>
+
+      {/* Checking state */}
+      {checking && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, padding: '8px 12px', borderRadius: 7, background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.2)' }}>
+          <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#f59e0b', animation: 'blink 0.8s ease-in-out infinite' }} />
+          <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: 'rgba(245,158,11,.8)' }}>Verifying wallet balance on Solana mainnet...</span>
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 7, background: 'rgba(255,69,69,.06)', border: '1px solid rgba(255,69,69,.25)' }}>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: '#ff4545', lineHeight: 1.6 }}>⚠ {error}</div>
+          {error.includes('Insufficient') && (
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(255,150,69,.7)', marginTop: 6 }}>
+              ◎ Wallet minimum for Double Trouble: $225.44 USDC · Please top up and try again.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Success */}
+      {balanceData && balanceData.meetsMinimum && (
+        <div style={{ marginTop: 8, padding: '10px 14px', borderRadius: 7, background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <span style={{ color: '#f59e0b', fontSize: 14 }}>✓</span>
+            <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: '#f59e0b', fontWeight: 600 }}>Wallet balance verified</span>
+          </div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(245,158,11,.65)', lineHeight: 1.8 }}>
+            {balanceData.balance.toFixed(4)} SOL · ${balanceData.usdcValue.toFixed(2)} USDC<br />
+            <span style={{ color: 'rgba(245,158,11,.4)' }}>SOL price: ${balanceData.solPrice.toFixed(2)} · Min: $225.44 USDC</span>
+          </div>
+        </div>
+      )}
+
+      <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(245,158,11,.3)', marginTop: 8, marginBottom: 14 }}>
+        ◎ Wallet minimum for Double Trouble: $225.44 USDC · Verified on-chain
+      </p>
       <div style={{ display: 'flex', gap: 10 }}>
-        <BtnBack onClick={onBack} /><DTBtnNext onClick={submit}>NEXT →</DTBtnNext>
+        <BtnBack onClick={onBack} />
+        <DTBtnNext onClick={checkAndNext} disabled={checking}>{checking ? 'VERIFYING...' : 'NEXT →'}</DTBtnNext>
       </div>
     </div>
   );
