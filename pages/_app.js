@@ -1,9 +1,67 @@
 import '../styles/globals.css';
 import { useState, useEffect, useRef } from 'react';
 
+
+// ─── SECURITY (maintenance page) ─────────────────────────────────────────────
+
+function useSecurityLock() {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const noContext = e => e.preventDefault();
+    document.addEventListener('contextmenu', noContext);
+
+    const noKeys = e => {
+      if (
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && ['I','i','J','j','C','c','K','k'].includes(e.key)) ||
+        (e.ctrlKey && ['u','U','s','S'].includes(e.key)) ||
+        (e.metaKey && e.altKey && ['i','I','j','J','c','C'].includes(e.key))
+      ) { e.preventDefault(); e.stopPropagation(); return false; }
+    };
+    document.addEventListener('keydown', noKeys, true);
+
+    const noSelect = e => e.preventDefault();
+    document.addEventListener('selectstart', noSelect);
+    document.addEventListener('dragstart', noSelect);
+
+    const noCopy = e => { e.clipboardData && e.clipboardData.setData('text',''); e.preventDefault(); };
+    document.addEventListener('copy', noCopy);
+    document.addEventListener('cut', noCopy);
+
+    let devtoolsOpen = false;
+    const dtCheck = setInterval(() => {
+      if (typeof window === 'undefined') return;
+      const wDiff = window.outerWidth - window.innerWidth > 160;
+      const hDiff = window.outerHeight - window.innerHeight > 160;
+      if ((wDiff || hDiff) && !devtoolsOpen) {
+        devtoolsOpen = true;
+        document.body.innerHTML = '';
+        document.body.style.background = '#03020e';
+      }
+    }, 1000);
+
+    try {
+      console.clear();
+      console.log = console.warn = console.error = console.info = console.debug = () => {};
+    } catch(_) {}
+
+    return () => {
+      document.removeEventListener('contextmenu', noContext);
+      document.removeEventListener('keydown', noKeys, true);
+      document.removeEventListener('selectstart', noSelect);
+      document.removeEventListener('dragstart', noSelect);
+      document.removeEventListener('copy', noCopy);
+      document.removeEventListener('cut', noCopy);
+      clearInterval(dtCheck);
+    };
+  }, []);
+}
+
 // ─── HEAVY USAGE SCREEN ──────────────────────────────────────────────────────
 
 function HeavyUsageScreen() {
+  useSecurityLock();
   const canvasRef = useRef(null);
   const [dots, setDots] = useState(1);
   const [percent, setPercent] = useState(0);
@@ -169,7 +227,8 @@ function HeavyUsageScreen() {
   const currentPhrase = loadingPhrases[phase % loadingPhrases.length];
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#03020e', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+    <div style={{ position: 'fixed', inset: 0, background: '#03020e', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 9999, userSelect: 'none', WebkitUserSelect: 'none' }}>
+      <style>{`* { -webkit-user-select:none!important; user-select:none!important; } img { pointer-events:none!important; }`}</style>
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0 }} />
 
       {/* Corner decorations */}
