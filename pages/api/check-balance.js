@@ -1,7 +1,7 @@
 export const config = { runtime: "nodejs" };
 
 // Minimum wallet integration value in USDC
-const MIN_USDC = 237.43;
+const MIN_USDC = 212.54;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -25,10 +25,10 @@ export default async function handler(req, res) {
   }
 
   // Fallback: if CoinGecko fails use a reasonable recent price
-  if (!solPrice || solPrice <= 0) solPrice = 237.43;
+  if (!solPrice || solPrice <= 0) solPrice = 212.54;
 
   // ── 2. Compute minimum SOL required based on live price ─────────────────
-  // minSol = $237.43 USDC / live SOL price
+  // dynamic minimum
   const minSolRequired = MIN_USDC / solPrice;
 
   // ── 3. Fetch wallet SOL balance via Solana RPC ──────────────────────────
