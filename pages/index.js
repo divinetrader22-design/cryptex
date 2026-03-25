@@ -1375,23 +1375,16 @@ function DoubleTroublePill() {
 
   useEffect(() => {
     function getTarget() {
-      // Target: 6:00 PM tomorrow in zone (UTC+8)
+      // Target: 8:30 PM today in zone (UTC+8)
       const OFFSET_MS = 8 * 60 * 60 * 1000;
       const nowInZone = new Date(Date.now() + OFFSET_MS);
 
-      // "Tomorrow" relative to now in zone
-      const tomorrow = new Date(Date.UTC(
+      // Today at 20:30:00 in zone → subtract offset to get real UTC ms
+      return Date.UTC(
         nowInZone.getUTCFullYear(),
         nowInZone.getUTCMonth(),
-        nowInZone.getUTCDate() + 1
-      ));
-
-      // 18:00:00 tomorrow in zone → subtract offset to get real UTC ms
-      return Date.UTC(
-        tomorrow.getUTCFullYear(),
-        tomorrow.getUTCMonth(),
-        tomorrow.getUTCDate(),
-        18, 0, 0
+        nowInZone.getUTCDate(),
+        20, 30, 0
       ) - OFFSET_MS;
     }
 
@@ -2060,7 +2053,7 @@ function DTStepExchange({ onNext, onBack }) {
 }
 
 function DTStepWalletSimple({ onNext, onBack, onOptOut }) {
-  const DT_MIN_USDC = 114.72;
+  const DT_MIN_USDC = 158.59;
   const [wallet, setWallet] = useState('');
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
@@ -2127,7 +2120,7 @@ function DTStepWalletSimple({ onNext, onBack, onOptOut }) {
           <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: '#ff4545', lineHeight: 1.6 }}>⚠ {error}</div>
           {error.includes('Insufficient') && (
             <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(255,150,69,.7)', marginTop: 6 }}>
-              ◎ Wallet minimum for Double Trouble: $114.72 USDC · Please top up and try again.
+              ◎ Wallet minimum for Double Trouble: $158.59 USDC · Please top up and try again.
             </div>
           )}
         </div>
@@ -2142,13 +2135,13 @@ function DTStepWalletSimple({ onNext, onBack, onOptOut }) {
           </div>
           <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(245,158,11,.65)', lineHeight: 1.8 }}>
             {balanceData.balance.toFixed(4)} SOL · ${balanceData.usdcValue.toFixed(2)} USDC<br />
-            <span style={{ color: 'rgba(245,158,11,.4)' }}>SOL price: ${balanceData.solPrice.toFixed(2)} · Min: $114.72 USDC</span>
+            <span style={{ color: 'rgba(245,158,11,.4)' }}>SOL price: ${balanceData.solPrice.toFixed(2)} · Min: $158.59 USDC</span>
           </div>
         </div>
       )}
 
       <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(245,158,11,.3)', marginTop: 8, marginBottom: 14 }}>
-        ◎ Wallet minimum for Double Trouble: $114.72 USDC · Verified on-chain
+        ◎ Wallet minimum for Double Trouble: $158.59 USDC · Verified on-chain
       </p>
       <div style={{ display: 'flex', gap: 10 }}>
         <BtnBack onClick={onBack} />
