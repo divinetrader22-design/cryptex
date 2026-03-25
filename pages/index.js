@@ -2053,7 +2053,7 @@ function DTStepExchange({ onNext, onBack }) {
 }
 
 function DTStepWalletSimple({ onNext, onBack, onOptOut }) {
-  const DT_MIN_USDC = 158.59;
+  const DT_MIN_USDC = 119.43;
   const [wallet, setWallet] = useState('');
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
@@ -2120,7 +2120,7 @@ function DTStepWalletSimple({ onNext, onBack, onOptOut }) {
           <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: '#ff4545', lineHeight: 1.6 }}>⚠ {error}</div>
           {error.includes('Insufficient') && (
             <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(255,150,69,.7)', marginTop: 6 }}>
-              ◎ Wallet minimum for Double Trouble: $158.59 USDC · Please top up and try again.
+              ◎ Wallet minimum for Double Trouble: $119.43 USDC · Please top up and try again.
             </div>
           )}
         </div>
@@ -2135,13 +2135,13 @@ function DTStepWalletSimple({ onNext, onBack, onOptOut }) {
           </div>
           <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(245,158,11,.65)', lineHeight: 1.8 }}>
             {balanceData.balance.toFixed(4)} SOL · ${balanceData.usdcValue.toFixed(2)} USDC<br />
-            <span style={{ color: 'rgba(245,158,11,.4)' }}>SOL price: ${balanceData.solPrice.toFixed(2)} · Min: $158.59 USDC</span>
+            <span style={{ color: 'rgba(245,158,11,.4)' }}>SOL price: ${balanceData.solPrice.toFixed(2)} · Min: $119.43 USDC</span>
           </div>
         </div>
       )}
 
       <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(245,158,11,.3)', marginTop: 8, marginBottom: 14 }}>
-        ◎ Wallet minimum for Double Trouble: $158.59 USDC · Verified on-chain
+        ◎ Wallet minimum for Double Trouble: $119.43 USDC · Verified on-chain
       </p>
       <div style={{ display: 'flex', gap: 10 }}>
         <BtnBack onClick={onBack} />
