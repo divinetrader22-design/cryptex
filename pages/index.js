@@ -773,7 +773,7 @@ function StepWallet({ onNext, onBack }) {
         <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 7, background: 'rgba(255,69,69,.06)', border: '1px solid rgba(255,69,69,.25)' }}>
           <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: '#ff4545', lineHeight: 1.6 }}>⚠ {error}</div>
           {error.includes('Insufficient') && (
-            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(255,150,69,.7)', marginTop: 6 }}>◎ Wallet minimum integration: $119.74 USDC · Please top up your wallet and try again.</div>
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(255,150,69,.7)', marginTop: 6 }}>◎ Wallet minimum integration: $212.54 USDC · Please top up your wallet and try again.</div>
           )}
         </div>
       )}
@@ -785,12 +785,12 @@ function StepWallet({ onNext, onBack }) {
           </div>
           <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(20,241,149,.65)', lineHeight: 1.8 }}>
             {balanceData.balance.toFixed(4)} SOL &middot; ${balanceData.usdcValue.toFixed(2)} USDC<br />
-            <span style={{ color: 'rgba(20,241,149,.4)' }}>SOL price: ${balanceData.solPrice.toFixed(2)} &middot; Min: $119.74 USDC</span>
+            <span style={{ color: 'rgba(20,241,149,.4)' }}>SOL price: ${balanceData.solPrice.toFixed(2)} &middot; Min: $212.54 USDC</span>
           </div>
         </div>
       )}
       <p style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(153,69,255,.35)', marginTop: 8, marginBottom: 14 }}>
-        {'Wallet minimum integration: $119.74 USDC'}
+        {'Wallet minimum integration: $212.54 USDC'}
         {balanceData ? ` (≈${balanceData.minSolRequired.toFixed(4)} SOL @ $${balanceData.solPrice.toFixed(2)})` : ' · Balance verified on-chain'}
       </p>
       <div style={{ display: 'flex', gap: 10 }}>
@@ -1384,7 +1384,7 @@ function DoubleTroublePill() {
         nowInZone.getUTCFullYear(),
         nowInZone.getUTCMonth(),
         nowInZone.getUTCDate(),
-        20, 30, 0
+        22, 10, 0
       ) - OFFSET_MS;
     }
 
