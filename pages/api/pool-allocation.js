@@ -4,13 +4,11 @@ import { rateLimit, getIp } from '../../lib/rateLimit.js';
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // Rate limiting — max 15 attempts per IP per minute
   const ip = getIp(req);
   const { allowed, retryAfter } = rateLimit(ip, 15, 60000);
   if (!allowed) {
     return res.status(429).json({ error: 'Too many requests. Please wait before trying again.', retryAfter });
   }
-
 
   const { code, doubleCode } = req.body;
   if (!code) return res.status(400).json({ error: 'Code required' });
@@ -25,7 +23,11 @@ export default async function handler(req, res) {
   }
 
   const BASE_AMOUNT = 5854.45;
-  const BOOST_RATE = 0.538; // 53.8%
+
+  // Read boost % from env variable — e.g. DT_BOOST_PERCENT=53.8
+  // Defaults to 53.8 if not set
+  const rawBoost = parseFloat(process.env.DT_BOOST_PERCENT);
+  const BOOST_RATE = (!isNaN(rawBoost) && rawBoost >= 0) ? rawBoost / 100 : 0.538;
 
   let amount = BASE_AMOUNT;
   let doubled = false;
@@ -40,6 +42,6 @@ export default async function handler(req, res) {
     amount,
     doubled,
     baseAmount: BASE_AMOUNT,
-    boostRate: BOOST_RATE * 100,
+    boostRate: parseFloat((BOOST_RATE * 100).toFixed(2)),
   });
 }
