@@ -1,6 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 
+// ─── DISBURSAL DATE HOOK ─────────────────────────────────────────────────────
+
+function useDisbursalDate() {
+  const [date, setDate] = useState('April 1 - 3, 2025');
+  useEffect(() => {
+    fetch('/api/disbursal-date')
+      .then(r => r.json())
+      .then(d => { if (d.date) setDate(d.date); })
+      .catch(() => {});
+  }, []);
+  return date;
+}
+
 // ─── SECURITY LAYER ──────────────────────────────────────────────────────────
 
 function SecurityLayer() {
@@ -619,6 +632,29 @@ function BtnBack({ onClick }) {
 
 // ─── FORM STEPS ───────────────────────────────────────────────────────────
 
+// ─── DISBURSAL DATE COMPONENTS ───────────────────────────────────────────────
+
+function DisbursalNote() {
+  const date = useDisbursalDate();
+  return (
+    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(20,241,149,.5)' }}>
+      ◎ Withdrawals disbursed {date}
+    </span>
+  );
+}
+
+function DisbursalDateDisplay({ color, labelColor }) {
+  const date = useDisbursalDate();
+  const c = color || '#fff';
+  const lc = labelColor || '#14f195';
+  return (
+    <>
+      <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: lc, letterSpacing: 2 }}>WITHDRAWAL SCHEDULE</div>
+      <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 22, fontWeight: 700, color: c, marginTop: 4 }}>{date}</div>
+    </>
+  );
+}
+
 function StepAccess({ onNext }) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -654,7 +690,7 @@ function StepAccess({ onNext }) {
         <BtnNext onClick={submit} disabled={loading}>{loading ? 'VERIFYING...' : 'AUTHENTICATE →'}</BtnNext>
       </div>
       <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 8, background: 'rgba(20,241,149,.04)', border: '1px solid rgba(20,241,149,.1)', textAlign: 'center' }}>
-        <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(20,241,149,.5)' }}>◎ Withdrawals disbursed April 1–3</span>
+        <DisbursalNote />
       </div>
     </div>
   );
@@ -898,8 +934,7 @@ function StepSuccess() {
       <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 20, fontWeight: 700, background: 'linear-gradient(135deg,#9945ff,#14f195)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 8 }}>SUBMISSION CONFIRMED</div>
       <p style={{ fontSize: 13, color: 'rgba(224,224,255,.4)', lineHeight: 1.8, marginBottom: 22 }}>Your entry has been recorded on-chain.<br />Withdrawals will be processed in order.</p>
       <div style={{ background: 'rgba(20,241,149,.05)', border: '1px solid rgba(20,241,149,.15)', borderRadius: 10, padding: 16 }}>
-        <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: '#14f195', letterSpacing: 2 }}>WITHDRAWAL SCHEDULE</div>
-        <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 22, fontWeight: 700, color: '#fff', marginTop: 4 }}>April 1 – 3, 2025</div>
+        <DisbursalDateDisplay />
       </div>
     </div>
   );
@@ -1209,6 +1244,56 @@ function KYCModal({ onNext, onClose }) {
   );
 }
 
+// ─── DISBURSAL BANNER PILL ───────────────────────────────────────────────────
+
+function DisburalBanner() {
+  const date = useDisbursalDate();
+
+  const text = `◎ WITHDRAWAL DISBURSEMENT · ${date.toUpperCase()} · SETTLEMENTS ARRIVING 5TH TO 7TH · WITHDRAWAL DISBURSEMENT · ${date.toUpperCase()} · SETTLEMENTS ARRIVING 5TH TO 7TH · `;
+  const repeated = text.repeat(3);
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 56,
+      left: 0,
+      right: 0,
+      zIndex: 99,
+      overflow: 'hidden',
+      borderBottom: '1px solid rgba(20,241,149,.12)',
+      borderTop: '1px solid rgba(20,241,149,.08)',
+      background: 'rgba(4,3,13,.75)',
+      backdropFilter: 'blur(8px)',
+      padding: '5px 0',
+    }}>
+      <div style={{
+        display: 'inline-block',
+        whiteSpace: 'nowrap',
+        animation: 'scrollLeft 28s linear infinite',
+      }}>
+        <span style={{
+          fontFamily: "'Share Tech Mono', monospace",
+          fontSize: 10,
+          letterSpacing: '2px',
+          color: 'rgba(20,241,149,.65)',
+        }}>{repeated}</span>
+        <span style={{
+          fontFamily: "'Share Tech Mono', monospace",
+          fontSize: 10,
+          letterSpacing: '2px',
+          color: 'rgba(20,241,149,.65)',
+        }}>{repeated}</span>
+      </div>
+      <style>{`
+        @keyframes scrollLeft {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 // ─── COUNTDOWN PILL ──────────────────────────────────────────────────────────
 
 function CountdownPill() {
@@ -1508,6 +1593,7 @@ function PoolModal({ onClose }) {
   const [doubleError, setDoubleError] = useState('');
   const [doubleApplied, setDoubleApplied] = useState(false);
   const [doubleLoading, setDoubleLoading] = useState(false);
+  const disbursalDate = useDisbursalDate();
 
   const submitCode = async () => {
     if (!poolCode.trim()) { setCodeError('Enter your allocation code'); return; }
@@ -1665,6 +1751,13 @@ function PoolModal({ onClose }) {
                 >{doubleLoading ? 'APPLYING...' : '⚡ APPLY BOOST →'}</button>
               </div>
             )}
+
+
+            {/* Disbursal date */}
+            <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 10, background: 'rgba(20,241,149,.05)', border: '1px solid rgba(20,241,149,.15)', textAlign: 'center' }}>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: '#14f195', letterSpacing: 2, marginBottom: 4 }}>WITHDRAWAL SCHEDULE</div>
+              <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 16, fontWeight: 700, color: '#fff' }}>{disbursalDate}</div>
+            </div>
 
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => { setStage('code'); setResult(null); setDoubleApplied(false); setDoubleCode(''); setDoubleError(''); }}
@@ -1874,7 +1967,7 @@ function DoubleTroubleModal({ onClose }) {
               <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: 'rgba(255,150,69,.6)', lineHeight: 1.8 }}>
                 ◈ Risk waiver acknowledged and recorded<br />
                 ◈ Allocation subject to 40–72% market-adjusted reduction<br />
-                ◈ Disbursement on April 1–3
+                ◈ Disbursement per scheduled date
               </div>
             </div>
             <button onClick={onClose} style={{ width: '100%', fontFamily: "'Orbitron',sans-serif", fontSize: 11, letterSpacing: 2, padding: '13px 0', border: 'none', borderRadius: 9, background: 'linear-gradient(135deg,#7f1d1d,#991b1b)', color: '#fff', cursor: 'pointer', transition: 'all .3s' }}
@@ -2396,6 +2489,9 @@ export default function Home() {
 
         </div>
       </main>
+
+      {/* DISBURSAL BANNER */}
+      <DisburalBanner />
 
       {/* COUNTDOWN PILL */}
       <CountdownPill />
